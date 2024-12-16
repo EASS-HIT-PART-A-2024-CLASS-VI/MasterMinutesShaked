@@ -15,7 +15,7 @@ import os
 
 # xAI API details
 XAI_API_URL = "https://api.x.ai/v1/chat/completions"
-XAI_API_KEY = os.getenv("XAI_API_KEY", "xai-8R9u7ALNZuXiLlLmUapvAnD2GgzH9wp6SeTic9lgS2miNkajisEGBBXAqa7kBb2tEmXZKPtSft02oxuX")
+XAI_API_KEY = os.getenv("XAI_API_KEY", "")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -12,10 +12,13 @@ import subprocess
 import sys
 import torch
 import os
+from moudles import Task
+from datetime import datetime, timedelta
+from moudles import InputSchema, OutputSchema, ScheduleItem
 
 # xAI API details
 XAI_API_URL = "https://api.x.ai/v1/chat/completions"
-XAI_API_KEY = os.getenv("XAI_API_KEY", "")
+XAI_API_KEY = os.getenv("XAI_API_KEY", "xai-P2acES0zJOyDHTCf5nTLjLdJBXh3WFwrfTeHefdYOqMlpAyUfesKmdcc89sKuzD2EvYRaBkSqMEekyEZ")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -141,7 +144,50 @@ class XAIQueryRequest(BaseModel):
 
 # Increase generation timeout
 GENERATION_TIMEOUT = 180.0  # 3 minutes
+@app.post("/schedule", response_model=OutputSchema)
+async def generate_schedule(input_data: InputSchema):
+    """
+    Endpoint to generate a schedule based on tasks and constraints.
+    """
+    try:
+        tasks = sorted(input_data.tasks, key=lambda t: t.priority == "high", reverse=True)
+        constraints = input_data.constraints
+        
+        # Initialize start time
+        current_time = datetime.strptime(constraints.work_hours_start, "%H:%M")
+        work_end = datetime.strptime(constraints.work_hours_end, "%H:%M")
+        breaks = [(datetime.strptime(b.start, "%H:%M"), datetime.strptime(b.end, "%H:%M")) for b in constraints.breaks]
+        
+        schedule = []
+        notes = "High-priority tasks scheduled first. Breaks are included."
 
+        for task in tasks:
+            task_duration = timedelta(minutes=task.duration_minutes)
+            
+            # Adjust for breaks
+            for break_start, break_end in breaks:
+                if current_time >= break_start and current_time < break_end:
+                    current_time = break_end
+
+            # Ensure task fits in work hours
+            if current_time + task_duration > work_end:
+                notes = "Not all tasks could be scheduled within working hours."
+                break
+            
+            # Schedule task
+            end_time = current_time + task_duration
+            schedule.append(ScheduleItem(
+                task_id=task.id,
+                start_time=current_time.strftime("%H:%M"),
+                end_time=end_time.strftime("%H:%M")
+            ))
+            current_time = end_time  # Update current time
+        
+        return OutputSchema(schedule=schedule, notes=notes)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Scheduling failed: {str(e)}")
+    
 @app.post("/huggingface/query")
 async def query_huggingface_model(request: HuggingFaceQueryRequest) -> Dict[str, str]:
     if not MODEL_STATE["ready"]:

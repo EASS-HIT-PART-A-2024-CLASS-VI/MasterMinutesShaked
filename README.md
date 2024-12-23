@@ -37,12 +37,7 @@ This section provides details on the available GET and POST requests for the app
 | POST       | `/xai/query`              | Query the XAI model with a system prompt and user query | `{ "messages": [{"role": "system", "content": "<prompt>"}, {"role": "user", "content": "<user_query>"}], "model": "<model_name>", "stream": <boolean>, "temperature": <float> }` | JSON object with the model's response to the query.       |
 | POST       | `/schedule`               | Schedule tasks based on provided constraints and tasks | `{ "tasks": [ { "id": "<task_id>", "name": "<task_name>", "priority": "<priority>", "duration_minutes": <int>, "deadline": "<deadline>" } ], "constraints": { "work_hours_start": "<HH:MM>", "work_hours_end": "<HH:MM>", "breaks": [ { "start": "<HH:MM>", "end": "<HH:MM>" } ] } }` | JSON object with the scheduled tasks and any notes. |
 
-### Example: `/health` GET request
-- **Request:**
-  ```bash
-  curl http://127.0.0.1:1236/health
-  5. POST /schedule (With additional task)
-Description: Example of scheduling additional tasks while respecting work hour constraints.
+
 # API Documentation
 
 This document outlines the available API endpoints and their usage.

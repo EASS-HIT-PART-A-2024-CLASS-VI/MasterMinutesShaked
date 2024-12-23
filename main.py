@@ -219,7 +219,7 @@ async def generate_schedule(input_data: InputSchema):
          "low": 1
         }
 
-        # Sort tasks based on priority
+# Sort tasks based on priority
         tasks = sorted(xai_suggestions, key=lambda t: priority_map.get(t.priority, 0), reverse=True)
 
         constraints = input_data.constraints

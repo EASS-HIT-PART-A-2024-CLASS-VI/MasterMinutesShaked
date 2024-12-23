@@ -43,5 +43,148 @@ This section provides details on the available GET and POST requests for the app
   curl http://127.0.0.1:1236/health
   5. POST /schedule (With additional task)
 Description: Example of scheduling additional tasks while respecting work hour constraints.
+# API Documentation
+
+This document outlines the available API endpoints and their usage.
+
+## Base URL
+`http://127.0.0.1:1236`
+
+## Endpoints
+
+### Health Check
+`GET /health`
+
+Checks server and model health status.
+
+**Request**
+```bash
+curl http://127.0.0.1:1236/health
+```
+
+**Response**
+```json
+{
+    "status": "healthy",
+    "model_ready": true
+}
+```
+
+### Query Hugging Face Model
+`POST /huggingface/query`
+
+Generate responses using the Hugging Face model.
+
+**Request**
+```bash
+curl -X POST "http://127.0.0.1:1236/huggingface/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input_text": "Create a schedule for Elon Musk",
+    "max_length": 200
+  }'
+```
+
+**Response**
+```json
+{
+    "generated_text": "Elon Musk's optimal daily schedule includes gym, meetings, coding, and family time."
+}
+```
+
+### Query XAI Model
+`POST /xai/query`
+
+Generate responses using the XAI model with system prompts.
+
+**Request**
+```bash
+curl -X POST "http://127.0.0.1:1236/xai/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "system", "content": "You are a time management expert."},
+      {"role": "user", "content": "Create a daily schedule for me."}
+    ],
+    "model": "grok-beta",
+    "stream": false,
+    "temperature": 0.7
+  }'
+```
+
+**Response**
+```json
+{
+    "choices": [
+        {
+            "message": {
+                "content": "Here's your daily schedule: ...\n"
+            }
+        }
+    ]
+}
+```
+
+### Schedule Tasks
+`POST /schedule`
+
+Create schedules based on tasks and constraints.
+
+**Request Body Parameters**
+- `tasks`: Array of tasks with id, name, priority, duration, and deadline
+- `constraints`: Work hours and break periods
+
+**Example Request**
+```bash
+curl -X POST "http://127.0.0.1:1236/schedule" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tasks": [
+      {
+        "id": "1",
+        "name": "Meeting with Team",
+        "priority": "high",
+        "duration_minutes": 60,
+        "deadline": "2024-12-23T09:00:00Z"
+      },
+      {
+        "id": "2",
+        "name": "Coding",
+        "priority": "medium",
+        "duration_minutes": 120,
+        "deadline": "2024-12-23T12:00:00Z"
+      }
+    ],
+    "constraints": {
+      "work_hours_start": "09:00",
+      "work_hours_end": "17:00",
+      "breaks": [
+        {
+          "start": "12:00",
+          "end": "13:00"
+        }
+      ]
+    }
+  }'
+```
+
+**Response**
+```json
+{
+    "schedule": [
+        {
+            "task_id": "1",
+            "start_time": "09:00",
+            "end_time": "10:00"
+        },
+        {
+            "task_id": "2",
+            "start_time": "13:00",
+            "end_time": "15:00"
+        }
+    ],
+    "notes": "Tasks scheduled successfully within the work hours."
+}
+```
 
 

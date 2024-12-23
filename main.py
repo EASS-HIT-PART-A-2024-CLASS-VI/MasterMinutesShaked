@@ -15,10 +15,47 @@ import os
 from moudles import Task
 from datetime import datetime, timedelta
 from moudles import InputSchema, OutputSchema, ScheduleItem
+import json
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
+import requests
+# Define input and output schemas
+
+class Task(BaseModel):
+    id: str
+    name: str
+    priority: str  # "high", "medium", or "low"
+    duration_minutes: int
+    deadline: Optional[str]  # ISO format: "YYYY-MM-DDTHH:MM:SSZ"
+
+class Break(BaseModel):
+    start: str  # "HH:MM"
+    end: str  # "HH:MM"
+
+class Constraints(BaseModel):
+    work_hours_start: str  # "HH:MM"
+    work_hours_end: str  # "HH:MM"
+    breaks: List[Break]
+
+class InputSchema(BaseModel):
+    tasks: List[Task]
+    constraints: Constraints
+
+class ScheduleItem(BaseModel):
+    task_id: str
+    start_time: str  # "HH:MM"
+    end_time: str  # "HH:MM"
+
+class OutputSchema(BaseModel):
+    schedule: List[ScheduleItem]
+    notes: str
+
+app = FastAPI()
 
 # xAI API details
 XAI_API_URL = "https://api.x.ai/v1/chat/completions"
-XAI_API_KEY = os.getenv("XAI_API_KEY", "xai-P2acES0zJOyDHTCf5nTLjLdJBXh3WFwrfTeHefdYOqMlpAyUfesKmdcc89sKuzD2EvYRaBkSqMEekyEZ")
+XAI_API_KEY = os.getenv("XAI_API_KEY", "xai-uviGwWjjYXky5HXFSGtIfYsSs7tmSgUJGPgvRJZTQ1Sax8is1nhOYdejDyuCaGA9zzONUNX0wc42LOSk")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -144,13 +181,47 @@ class XAIQueryRequest(BaseModel):
 
 # Increase generation timeout
 GENERATION_TIMEOUT = 180.0  # 3 minutes
+
 @app.post("/schedule", response_model=OutputSchema)
 async def generate_schedule(input_data: InputSchema):
     """
-    Endpoint to generate a schedule based on tasks and constraints.
+    Endpoint to generate a schedule based on tasks and constraints,
+    possibly utilizing XAI API for task prioritization or assistance.
     """
     try:
-        tasks = sorted(input_data.tasks, key=lambda t: t.priority == "high", reverse=True)
+        # Prepare data for the XAI model (e.g., task details, constraints)
+        xai_input = {
+            "messages": [
+                {"role": "system", "content": "Please assist in scheduling tasks."},
+                {"role": "user", "content": json.dumps(input_data.dict())}
+            ],
+            "model": "grok-beta",  # or the XAI model you are using
+            "stream": False,
+            "temperature": 0.5
+        }
+
+        # Query the XAI model for additional scheduling suggestions or prioritization
+        xai_response = await query_xai_model(request=XAIQueryRequest(**xai_input))
+
+        # Parse the XAI response (you can decide how to process the response)
+        # For example, assuming XAI provides task reordering or other suggestions:
+        xai_suggestions = xai_response.get("suggestions", [])
+
+        # If no suggestions from XAI, fall back to default logic
+        if not xai_suggestions:
+            xai_suggestions = input_data.tasks
+
+        # Now use the suggestions from XAI to proceed with schedule generation
+       # Priority mapping for sorting
+        priority_map = {
+         "high": 3,
+         "medium": 2,
+         "low": 1
+        }
+
+        # Sort tasks based on priority
+        tasks = sorted(xai_suggestions, key=lambda t: priority_map.get(t.priority, 0), reverse=True)
+
         constraints = input_data.constraints
         
         # Initialize start time
@@ -187,6 +258,7 @@ async def generate_schedule(input_data: InputSchema):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Scheduling failed: {str(e)}")
+
     
 @app.post("/huggingface/query")
 async def query_huggingface_model(request: HuggingFaceQueryRequest) -> Dict[str, str]:

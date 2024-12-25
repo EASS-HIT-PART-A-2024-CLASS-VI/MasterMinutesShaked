@@ -22,16 +22,16 @@ class InputSchema(BaseModel):
     tasks: List[Task]
     constraints: Constraints
 
-# Output schema
 class ScheduleItem(BaseModel):
     task_id: str
-    start_time: str  # "HH:MM"
-    end_time: str  # "HH:MM"
+    start_time: str
+    end_time: str
+    name: Optional[str] = None  # Add this line if you want a name field
 
 class OutputSchema(BaseModel):
+    schedule_id: str  # Ensure this is included
     schedule: List[ScheduleItem]
     notes: str
-
 # 3. Example input
 input_data = {
     "tasks": [
@@ -51,6 +51,7 @@ print("Validated Input:", validated_input.model_dump_json(indent=2))
 
 # 4. Example LLM response
 response_data = {
+    "schedule_id": "some-unique-id",  # Add a unique schedule ID here
     "schedule": [
         {"task_id": "1", "start_time": "09:00", "end_time": "11:00"},
         {"task_id": "2", "start_time": "13:00", "end_time": "14:00"}

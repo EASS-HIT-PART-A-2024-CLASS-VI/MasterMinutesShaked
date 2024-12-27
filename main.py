@@ -156,13 +156,12 @@ async def get_schedule(schedule_id: str):
     try:
         # Check if the schedule_id exists in the saved_schedule dictionary
         if schedule_id not in saved_schedule:
-            raise HTTPException(status_code=404, detail="Schedule not found")
-
+            raise HTTPException(status_code=404, detail="Schedule not found") 
         # Retrieve the schedule and notes from the saved_schedule
         schedule_data = saved_schedule[schedule_id]
         schedule = schedule_data.get("schedule", [])
         notes = schedule_data.get("notes", "")
-
+        #
         # Return the schedule with the schedule_id
         return OutputSchema(schedule_id=schedule_id, schedule=schedule, notes=notes)
 

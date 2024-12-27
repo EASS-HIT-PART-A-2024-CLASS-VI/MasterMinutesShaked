@@ -22,7 +22,7 @@ class InputSchema(BaseModel):
     tasks: List[Task]
     constraints: Constraints
 
-class ScheduleItem(BaseModel):
+class ScheduleItem(BaseModel): 
     task_id: str
     start_time: str
     end_time: str
@@ -49,7 +49,7 @@ input_data = {
 validated_input = InputSchema(**input_data)
 print("Validated Input:", validated_input.model_dump_json(indent=2))
 
-# 4. Example LLM response
+# 4. Example LLM responses
 response_data = {
     "schedule_id": "some-unique-id",  # Add a unique schedule ID here
     "schedule": [

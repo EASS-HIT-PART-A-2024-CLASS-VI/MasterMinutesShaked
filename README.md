@@ -1,102 +1,236 @@
-# 📅 AI-Powered Task Scheduler
+# 📅 LLM-Powered Task Scheduler API
 
-FastAPI application integrating multiple AI models (Grok and HuggingFace GPT-2) for intelligent task scheduling and natural language processing.
+A FastAPI-based project that leverages a Large Language Model (LLM) to intelligently schedule tasks based on user-defined constraints. This project aims to automate the task scheduling process, making it more efficient and adaptable.
 
-## 🎯 Features
+## 📁 Project Structure
 
-* **🤖 Dual AI Integration**: HuggingFace (DistilGPT-2) for text generation + Grok for task prioritization
-* **⚡ Smart Scheduling**: Priority-based task arrangement with constraints
-* **🕒 Time Management**: Work hours and breaks handling
-* **🔍 Health Monitoring**: Real-time system and model status checks
-
-## 🛠️ Technologies
-
-* **🚀 FastAPI & Uvicorn**: Web framework and ASGI server
-* **🤖 AI Models**: Grok API and HuggingFace Transformers
-* **🐍 PyTorch**: Deep learning framework
-* **✨ Pydantic & HTTPX**: Data validation and HTTP client
-
-## 📂 Project Structure
 ```
-.
-├── main.py           # FastAPI app and endpoints
-├── modules.py        # Data models and schemas
-├── test_llm.py       # LLM integration tests
-├── run_tests.sh      # Test runner script
-└── README.md         # Documentation
+├── main.py # Main FastAPI application file
+├── moudles.py # Pydantic models for data validation
+├── test_llm.py # Pytest test suite for the API
+├── run_tests.sh # Shell script to run tests
+└── README.md # This file
 ```
 
-## 📥 Installation
+* `main.py`: Contains the core logic of the FastAPI application, including API endpoints and scheduling logic.
+* `moudles.py`: Defines the Pydantic models for request and response data validation.
+* `test_llm.py`: Contains tests that validate the various functionalities of the program.
+* `run_tests.sh`: A shell script for starting the API and executing the tests.
+* `README.md`: Provides essential information about the project.
 
-### Prerequisites
-```bash
-Python 3.7+
-pip install fastapi uvicorn pytorch transformers httpx pydantic pytest
-export XAI_API_KEY="your-key"
-```
+## ⚙️ API Endpoints Overview
 
-### Quick Start
-```bash
-git clone https://github.com/yourusername/task-scheduler.git
-cd task-scheduler
-pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 1236
-```
+| Method | Endpoint | Description | Request Body | Response Body |
+|--------|----------|-------------|--------------|---------------|
+| POST | `/schedule` | Generates a task schedule using an LLM or falls back to a local scheduler. | JSON object containing `tasks`, `constraints`, and optional `working_days` | JSON object containing `schedule_id`, `schedule` array, and `notes`. |
+| GET | `/schedule/{schedule_id}` | Fetches a schedule based on its ID. | None | JSON object containing `schedule_id`, `schedule` array, and `notes`. |
+| PUT | `/schedule/{schedule_id}/task/{task_id}` | Updates a specific task within a schedule using the provided `task_id` and `schedule_id`. | JSON object containing `task_id`, `task_name`, `start_time`, `end_time`, `priority` and `notes`. | JSON object with the `message` string `"Task updated"` along with the full updated `task` object. |
 
-[Previous sections remain the same until API Reference]
+## ⚙️ API Endpoints Details
 
-## 🚀 API Reference
+### 📌 POST `/schedule`
 
-| Method | Endpoint | Description | Request Body | Response |
-|--------|----------|-------------|--------------|-----------|
-| GET | `/health` | Health check | None | `{"status": "healthy", "model_ready": true}` |
-| GET | `/schedule/{schedule_id}` | Fetch schedule | None | Schedule details with tasks |
-| POST | `/schedule` | Create schedule | `{"tasks": [{"id": str, "name": str, "priority": str, "duration_minutes": int}], "constraints": {"work_hours_start": "HH:MM", "work_hours_end": "HH:MM"}}` | Generated schedule with ID |
-| PUT | `/schedule/{schedule_id}/task/{task_id}` | Update task | `{"task_id": str, "start_time": "HH:MM", "end_time": "HH:MM"}` | Updated task schedule |
-| POST | `/xai/query` | Query Grok model | `{"messages": [], "model": "grok-beta", "stream": false, "temperature": float}` | AI model response |
-
-[Rest of the README remains the same]
-### Example: Create Schedule
-```bash
-curl -X POST "http://localhost:1236/schedule" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tasks": [
-      {
-        "id": "1",
-        "name": "Team Meeting",
-        "priority": "high",
-        "duration_minutes": 60,
-        "deadline": "2024-12-23T09:00:00Z"
-      }
-    ],
-    "constraints": {
-      "work_hours_start": "09:00",
-      "work_hours_end": "17:00",
-      "breaks": [{"start": "12:00", "end": "13:00"}]
-    }
-  }'
-```
-
-### Response Format
+* **Description:** Generates a task schedule using an LLM or falls back to a local scheduler.
+* **Request Body (JSON):**
 ```json
 {
-    "schedule": [
+    "tasks": [
         {
-            "task_id": "1",
-            "start_time": "09:00",
-            "end_time": "10:00"
+            "name": "string",
+            "duration_minutes": 0,
+            "priority": "string",
+            "notes": "string"
         }
     ],
-    "notes": "Tasks scheduled successfully within work hours."
+    "constraints": {
+        "daily_start_time": "string (HH:MM)",
+        "daily_end_time": "string (HH:MM)",
+        "breaks": [
+            {
+                "start": "string (HH:MM)",
+                "end": "string (HH:MM)"
+            }
+        ],
+        "workdays": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+    }
 }
 ```
 
-## 🧪 Testing
+| Field | Type | Description |
+|-------|------|-------------|
+| `tasks` | `Array` | List of task objects |
+| `tasks[].name` | `string` | Name of the task |
+| `tasks[].duration_minutes` | `integer` | Duration of the task in minutes |
+| `tasks[].priority` | `string` | Priority of the task (`high`, `medium`, or `low`) |
+| `tasks[].notes` | `string` | Optional notes for the task |
+| `constraints` | `Object` | Constraints for scheduling, like working hours and breaks |
+| `constraints.daily_start_time` | `string` | The start of the working hours. Format: `HH:MM` |
+| `constraints.daily_end_time` | `string` | The end of the working hours. Format: `HH:MM` |
+| `constraints.breaks` | `Array` | Optional array of break periods |
+| `constraints.breaks[].start` | `string` | Start of a break. Format: `HH:MM` |
+| `constraints.breaks[].end` | `string` | End of a break. Format: `HH:MM` |
+| `constraints.workdays` | `Array` | Optional array of working days. Allowed values: `SUN`, `MON`, `TUE`, `WED`, `THU`, `FRI`, `SAT`, defaults to all days |
+
+* **Response (JSON):**
+```json
+{
+    "schedule_id": "string (UUID)",
+    "schedule": [
+        {
+            "task_id": "string (UUID)",
+            "task_name": "string",
+            "start_time": "string (ISO format)",
+            "end_time": "string (ISO format)",
+            "priority": "string",
+            "notes": "string"
+        }
+    ],
+    "notes": "string"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `schedule_id` | `string` | Unique identifier for the generated schedule |
+| `schedule` | `Array` | List of scheduled task objects |
+| `schedule[].task_id` | `string` | Unique identifier for the task |
+| `schedule[].task_name` | `string` | Name of the scheduled task |
+| `schedule[].start_time` | `string` | Start time of the scheduled task in ISO format |
+| `schedule[].end_time` | `string` | End time of the scheduled task in ISO format |
+| `schedule[].priority` | `string` | Priority of the scheduled task (`high`, `medium`, or `low`) |
+| `schedule[].notes` | `string` | Optional notes for the scheduled task |
+| `notes` | `string` | Optional notes for the schedule |
+
+### 📌 GET `/schedule/{schedule_id}`
+
+* **Description:** Fetches a schedule based on its ID.
+* **Path Parameters:**
+  * `schedule_id` (`string`): The unique identifier of the schedule.
+* **Response (JSON):** Same as the response of `POST /schedule` above.
+* **Error Response:**
+  * 404 Not Found: If the schedule with the given `schedule_id` is not found.
+
+### 📌 PUT `/schedule/{schedule_id}/task/{task_id}`
+
+* **Description:** Updates a specific task within a schedule.
+* **Path Parameters:**
+  * `schedule_id` (`string`): The unique identifier of the schedule.
+  * `task_id` (`string`): The unique identifier of the task within the schedule.
+* **Request Body (JSON):**
+```json
+{
+    "task_id": "string (UUID)",
+    "task_name": "string",
+    "start_time": "string (ISO format)",
+    "end_time": "string (ISO format)",
+    "priority": "string",
+    "notes": "string"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `task_id` | `string` | Unique identifier for the task to be updated |
+| `task_name` | `string` | Updated name of the task |
+| `start_time` | `string` | Updated start time of the task in ISO format |
+| `end_time` | `string` | Updated end time of the task in ISO format |
+| `priority` | `string` | Updated priority of the task (`high`, `medium`, or `low`) |
+| `notes` | `string` | Updated optional notes for the task |
+
+* **Response (JSON):**
+```json
+{
+    "message": "Task updated",
+    "updated_task": {
+        "task_id": "string (UUID)",
+        "task_name": "string",
+        "start_time": "string (ISO format)",
+        "end_time": "string (ISO format)",
+        "priority": "string",
+        "notes": "string"
+    }
+}
+```
+
+* **Error Response:**
+  * 200 OK: If the `schedule_id` is not found, a message will be sent stating "Schedule not found".
+  * 200 OK: If the `task_id` is not found, a message will be sent stating "Task not found in the schedule".
+
+### ⚙️ `/gemini/query`
+
+* **Description:** Queries the Gemini API for task suggestions. This endpoint is not directly used for scheduling, but can be used for model testing.
+* **Request Body (JSON):**
+```json
+{
+    "messages": [
+        {
+            "role": "user",
+            "parts": [{"text": "string"}]
+        }
+    ],
+    "model": "string (model name)",
+    "temperature": 0.5
+}
+```
+* `messages`: An array of messages that can be passed to Gemini.
+* `model`: Which Gemini model to use.
+* `temperature`: The sampling temperature to use for the model.
+
+* **Response (JSON):**
+```json
+{
+    "response_text": "string"
+}
+```
+`response_text` contains the raw text response from the model
+
+## 🚀 How to Run
+
+Clone the repository:
 ```bash
+git clone [repository_url]
+cd [repository_directory]
+```
+
+Create a virtual environment:
+```bash
+python3 -m venv venv
+source venv/bin/activate   # On Linux/macOS
+# venv\Scripts\activate  # On Windows
+```
+
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+Note: you can create a requirements.txt by doing `pip freeze > requirements.txt` in your virtual environment
+
+Set up environment variables:
+
+Set your Google Gemini API key as an environment variable `GOOGLE_API_KEY`.
+```bash
+export GOOGLE_API_KEY="your_gemini_api_key"
+```
+
+Run the application:
+```bash
+uvicorn main:app --port 1236 --reload
+```
+
+Run the tests:
+```bash
+chmod +x run_tests.sh
 ./run_tests.sh
 ```
 
-## 📚 Documentation
-Access full API documentation at: `http://localhost:1236/docs`
+Access the API documentation at http://127.0.0.1:1236/docs
 
+## 🧪 Running Tests
+
+To validate the functionality, run the provided test script by running `./run_tests.sh`.
+This will start the application, execute the tests, and then shutdown the application.
+
+## 📜 License
+
+This project is licensed under the [Your License] License - see the LICENSE.md file for details.

@@ -5,115 +5,80 @@ from pydantic import BaseModel
 import json
 import os
 from typing import Dict, Any
-import httpx
 import uvicorn
 import time
 from moudles import InputSchema, OutputSchema, ScheduleItem
 import uuid
 from moudles import Task
 import uuid
+import asyncio
+import google.generativeai as genai
+
 
 app = FastAPI()
-XAI_API_URL = "https://api.x.ai/v1/chat/completions"
-XAI_API_KEY=os.getenv("XAI_API_KEY","xai-E1k9MfYkCYJpOjVDBApakzCDONYsB1Pa6bSpUB8WIKCnCPZZ5xVBKpL44qMQaKH7tGFE0uY4D7R22HM7")
 
+
+# Load Google Gemini API key
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyB_S1vLywfhvJjeQPBrj9xwYl7m3Lxxbng")
+if not GEMINI_API_KEY:
+    raise ValueError("GOOGLE_API_KEY environment variable not set")
+genai.configure(api_key=GEMINI_API_KEY)
+MODEL_NAME = "gemini-pro"
 # In-memory storage for GET endpoint
 saved_schedule = {}
 schedules=[]
 
-class XAIQueryRequest(BaseModel):
+
+class GeminiQueryRequest(BaseModel):
     messages: list
-    model: str = "grok-beta"
-    stream: bool = False
-    temperature: float = 0
+    model: str = MODEL_NAME #defaulting to gemini pro
+    temperature: float = 0.5
 
 
 @app.post("/schedule", response_model=OutputSchema)
 async def generate_schedule(input_data: InputSchema):
-    """
-    Endpoint to generate a schedule based on tasks and constraints,
-    possibly utilizing XAI API for task prioritization or assistance.
-    """
-    print(f"Received input_data: {input_data}")
-
     try:
-        # Prepare data for the XAI model (e.g., task details, constraints)
-        xai_input = {
+        # Attempt to query the external API
+        gemini_input = {
             "messages": [
-                {"role": "system", "content": "Please assist in scheduling tasks."},
-                {"role": "user", "content": json.dumps(input_data.dict())}
+                {"role": "user", "parts": [{"text": f"Please assist in scheduling tasks. here is a json containing my tasks {json.dumps(input_data.dict())}"}]},
             ],
-            "model": "grok-beta",  # or the XAI model you are using
-            "stream": False,
+            "model": MODEL_NAME,
             "temperature": 0.5
         }
+        try:
+            gemini_response = await query_gemini_model(request=GeminiQueryRequest(**gemini_input))
+            response_text = gemini_response.get("response_text", None)
+            xai_suggestions = []
+            if response_text:
+                # Attempt to load JSON if text is available
+                 try:
+                    xai_suggestions=json.loads(response_text)
+                 except json.JSONDecodeError:
+                    print("Failed to parse the model's output as JSON, using the original tasks instead.")
+                    xai_suggestions= input_data.tasks
+                 #if json was successfully parsed, we can sort by priority
+            else:
+                xai_suggestions = input_data.tasks
+        except HTTPException as e:
+            if e.status_code == 429:
+                # Fallback logic for local scheduling
+                xai_suggestions = input_data.tasks
+            else:
+                raise e
 
-        # Query the XAI model for additional scheduling suggestions or prioritization
-        xai_response = await query_xai_model(request=XAIQueryRequest(**xai_input))
+        # Use the suggestions from the API or the fallback tasks
+        tasks = sorted(
+            xai_suggestions,
+            key=lambda t: {"high": 3, "medium": 2, "low": 1}.get(t.priority, 0),
+            reverse=True
+        )
 
-        # Parse the XAI response (you can decide how to process the response)
-        xai_suggestions = xai_response.get("suggestions", [])
-
-        # If no suggestions from XAI, fall back to default logic
-        if not xai_suggestions:
-            xai_suggestions = input_data.tasks
-
-        # Priority mapping for sorting
-        priority_map = {
-            "high": 3,
-            "medium": 2,
-            "low": 1
-        }
-
-        # Sort tasks based on priority
-        tasks = sorted(xai_suggestions, key=lambda t: priority_map.get(t.priority, 0), reverse=True)
-
-        constraints = input_data.constraints
-        
-        # Initialize start time
-        current_time = datetime.strptime(constraints.work_hours_start, "%H:%M")
-        work_end = datetime.strptime(constraints.work_hours_end, "%H:%M")
-        breaks = [(datetime.strptime(b.start, "%H:%M"), datetime.strptime(b.end, "%H:%M")) for b in constraints.breaks]
-        
-        schedule = []
-        notes = "High-priority tasks scheduled first. Breaks are included."
-
-        for task in tasks:
-            task_duration = timedelta(minutes=task.duration_minutes)
-            
-            # Adjust for breaks
-            for break_start, break_end in breaks:
-                if current_time >= break_start and current_time < break_end:
-                    current_time = break_end
-
-            # Ensure task fits in work hours
-            if current_time + task_duration > work_end:
-                notes = "Not all tasks could be scheduled within working hours."
-                break
-            
-            # Schedule task
-            end_time = current_time + task_duration
-            schedule.append(ScheduleItem(
-                task_id=task.id,
-                start_time=current_time.strftime("%H:%M"),
-                end_time=end_time.strftime("%H:%M")
-            ))
-            current_time = end_time  # Update current time
-        
-        # Generate a unique schedule ID (for example, using UUID)
-        schedule_id = str(uuid.uuid4())
-
-        # Save the generated schedule (You can store this in memory or a database)
-        saved_schedule[schedule_id] = {
-            "schedule": schedule,
-            "notes": notes
-        }
-
-        # Return the schedule with the generated schedule_id
-        return OutputSchema(schedule_id=schedule_id, schedule=schedule, notes=notes)
-
+        # Scheduling logic...
+        return await schedule_tasks(tasks, input_data.constraints)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Scheduling failed: {str(e)}")
+
 
 @app.put("/schedule/{schedule_id}/task/{task_id}")
 async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem):
@@ -133,20 +98,6 @@ async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem
     # If task_id is not found
     return {"message": "Task not found in the schedule"}
 
-# @app.put("/schedule/{id}")
-# async def update_schedule(id: str, todo_obj: ScheduleItem):  # Use ScheduleItem here
-#     for schedule in saved_schedule.values():
-#         for i,task in enumerate(schedule['schedule']):
-#             if task.task_id == id:
-#                 schedule['schedule'][i] = todo_obj  
-#                 # task.name = todo_obj.name  # Update the name field
-#                 # task.start_time = todo_obj.start_time
-#                 # task.end_time = todo_obj.end_time
-#                 # del schedule['schedule'][i]
-#                 # schedule['schedule'][i].append(todo_obj)
-#                 return {"message": "Schedule updated", "schedule": todo_obj}
-#     return {"message": "Schedule not found"}
-
 
 @app.get("/schedule/{schedule_id}", response_model=OutputSchema)
 async def get_schedule(schedule_id: str):
@@ -156,7 +107,7 @@ async def get_schedule(schedule_id: str):
     try:
         # Check if the schedule_id exists in the saved_schedule dictionary
         if schedule_id not in saved_schedule:
-            raise HTTPException(status_code=404, detail="Schedule not found") 
+            raise HTTPException(status_code=404, detail="Schedule not found")
         # Retrieve the schedule and notes from the saved_schedule
         schedule_data = saved_schedule[schedule_id]
         schedule = schedule_data.get("schedule", [])
@@ -169,23 +120,135 @@ async def get_schedule(schedule_id: str):
         raise HTTPException(status_code=500, detail=f"Error fetching schedule: {str(e)}")
 
 
-@app.post("/xai/query")
-async def query_xai_model(request: XAIQueryRequest) -> Dict[str, Any]:
+@app.post("/gemini/query")
+async def query_gemini_model(request: GeminiQueryRequest) -> Dict[str, Any]:
+    MAX_RETRIES = 3
+    RETRY_DELAY = 5  # seconds
+
+    model = genai.GenerativeModel(request.model)
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            
+            # Adjust the prompt to use the new structure
+            messages=[{'role': 'user', 'parts': [{'text': message['parts'][0]['text']}]} for message in request.messages]
+            
+            response = model.generate_content(messages, generation_config={"temperature": request.temperature})
+            
+            if response.text:
+                return {"response_text": response.text}
+            else:
+                 print("Failed to process the model response.")
+                 return {}
+
+        except Exception as e:
+             if attempt < MAX_RETRIES - 1:
+                await asyncio.sleep(RETRY_DELAY)
+             else:
+                raise HTTPException(status_code=500, detail=f"Failed to query Gemini API: {str(e)}")
+
+    raise HTTPException(status_code=500, detail="Failed to query Gemini API after multiple retries")
+
+
+async def schedule_tasks(tasks: List[Task], constraints: dict) -> OutputSchema:
+     # Initialize an empty schedule and other necessary variables
+    schedule: List[ScheduleItem] = []
+    current_time = datetime.now()
+    last_end_time = current_time
+    
+    # Get daily start and end time from constraints, default to 9 am and 5 pm if not provided
+    start_time_str = constraints.get("daily_start_time", "09:00")
+    end_time_str = constraints.get("daily_end_time", "17:00")
+
+    # Parse start and end times
     try:
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {XAI_API_KEY}"
-        }
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(XAI_API_URL, headers=headers, json=request.dict())
-            response.raise_for_status()  # Raise an exception for HTTP errors
-            return response.json()  # Return the response as a JSON object
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="xAI API timeout")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+      start_time = datetime.strptime(start_time_str, '%H:%M').time()
+      end_time = datetime.strptime(end_time_str, '%H:%M').time()
+    except ValueError as e:
+      raise HTTPException(status_code=400, detail=f"Invalid time format in constraints: {str(e)}")
+
+    # Convert the string representations of breaks into datetime.time
+    breaks = []
+    if "breaks" in constraints:
+      for brk in constraints["breaks"]:
+            try:
+                 break_start_time = datetime.strptime(brk['start'], '%H:%M').time()
+                 break_end_time = datetime.strptime(brk['end'], '%H:%M').time()
+                 breaks.append({'start':break_start_time, 'end':break_end_time})
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=f"Invalid time format in constraints: {str(e)}")
+    
+    # Get workdays
+    workdays = constraints.get("workdays", ["SUN","MON","TUE","WED","THU","FRI","SAT"])
+
+    # Handle multiple days and dates here
+    for task in tasks:
+      task_duration_hours = task.duration_minutes / 60.0
+      
+      # Calculate the start time based on the last end time
+      task_start_time = last_end_time
+
+      # Check if the task_start_time is within the working hours
+      if task_start_time.time() < start_time:
+        task_start_time = task_start_time.replace(hour=start_time.hour, minute=start_time.minute)
+
+       # Adjust if the last_end_time falls outside work hours
+      if last_end_time.time() >= end_time:
+        last_end_time = last_end_time.replace(hour=start_time.hour, minute=start_time.minute)
+        last_end_time += timedelta(days=1)  # Move to next day
+      
+      # Ensure that the task is within the workdays
+      while task_start_time.strftime("%a").upper() not in workdays:
+         task_start_time += timedelta(days=1)
+         last_end_time = task_start_time
+         
+
+      
+      task_end_time = task_start_time + timedelta(hours=task_duration_hours)
+      
+      # Ensure task doesn't overlap breaks
+      for brk in breaks:
+            break_start = task_start_time.replace(hour=brk['start'].hour, minute=brk['start'].minute, second=0, microsecond=0)
+            break_end = task_start_time.replace(hour=brk['end'].hour, minute=brk['end'].minute, second=0, microsecond=0)
+            if break_start < task_end_time and break_end > task_start_time:
+                # Move the task after the break
+                task_start_time = break_end
+                task_end_time = task_start_time + timedelta(hours=task_duration_hours)
+
+      
+      if task_end_time.time() > end_time:
+         # Move the task to the next day and set to start of day
+          task_start_time = task_start_time.replace(hour=start_time.hour, minute=start_time.minute)
+          task_start_time += timedelta(days=1)
+          
+          #Ensure that the task is within the workdays
+          while task_start_time.strftime("%a").upper() not in workdays:
+             task_start_time += timedelta(days=1)
+
+          task_end_time = task_start_time + timedelta(hours=task_duration_hours)
+
+      last_end_time = task_end_time
+    # Append new schedule item to schedule list
+      new_schedule_item = ScheduleItem(
+        task_id=str(uuid.uuid4()),
+        task_name=task.name,
+        start_time=task_start_time.isoformat(),
+        end_time=task_end_time.isoformat(),
+        priority = task.priority,
+        notes=task.notes
+      )
+      schedule.append(new_schedule_item)
+    
+    schedule_id = str(uuid.uuid4())
+
+    saved_schedule[schedule_id] = {
+    "schedule": schedule,
+    "notes": ""
+}
+
+    return OutputSchema(schedule_id=schedule_id, schedule=schedule, notes="")
+
+
 
 
 if __name__ == "__main__":

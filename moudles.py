@@ -1,64 +1,31 @@
-from pydantic import BaseModel
 from typing import List, Optional
+from pydantic import BaseModel
+from datetime import datetime
+import uuid
 
-# Input schema
 class Task(BaseModel):
-    id: str
     name: str
-    priority: str  # "high", "medium", or "low"
     duration_minutes: int
-    deadline: Optional[str]  # ISO format: "YYYY-MM-DDTHH:MM:SSZ"
-
+    priority: str
+    notes: Optional[str] = None
 class Break(BaseModel):
-    start: str  # "HH:MM"
-    end: str  # "HH:MM"
-
-class Constraints(BaseModel):
-    work_hours_start: str  # "HH:MM"
-    work_hours_end: str  # "HH:MM"
-    breaks: List[Break]
-
+    start: str
+    end: str
 class InputSchema(BaseModel):
     tasks: List[Task]
-    constraints: Constraints
+    constraints: dict
+    working_days: Optional[List[str]] = None  # Defaults to None if not provided
 
-class ScheduleItem(BaseModel): 
+
+class ScheduleItem(BaseModel):
     task_id: str
+    task_name: str
     start_time: str
     end_time: str
-    name: Optional[str] = None  # Add this line if you want a name field
+    priority: str
+    notes: Optional[str] = None
 
 class OutputSchema(BaseModel):
-    schedule_id: str  # Ensure this is included
+    schedule_id: str
     schedule: List[ScheduleItem]
-    notes: str
-# 3. Example input
-input_data = {
-    "tasks": [
-        {"id": "1", "name": "Write report", "priority": "high", "duration_minutes": 120, "deadline": "2024-12-17T12:00:00Z"},
-        {"id": "2", "name": "Team meeting", "priority": "medium", "duration_minutes": 60, "deadline": None}
-    ],
-    "constraints": {
-        "work_hours_start": "09:00",
-        "work_hours_end": "17:00",
-        "breaks": [{"start": "12:00", "end": "13:00"}]
-    }
-}
-
-# Validate input
-validated_input = InputSchema(**input_data)
-print("Validated Input:", validated_input.model_dump_json(indent=2))
-
-# 4. Example LLM responses
-response_data = {
-    "schedule_id": "some-unique-id",  # Add a unique schedule ID here
-    "schedule": [
-        {"task_id": "1", "start_time": "09:00", "end_time": "11:00"},
-        {"task_id": "2", "start_time": "13:00", "end_time": "14:00"}
-    ],
-    "notes": "High-priority tasks scheduled first. Break added from 12:00 to 13:00."
-}
-
-# Validate response
-validated_response = OutputSchema(**response_data)
-print("Validated Response:", validated_input.model_dump_json(indent=2))
+    notes: Optional[str] = None

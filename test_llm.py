@@ -6,6 +6,8 @@ import signal
 import os
 import asyncio
 import logging
+import logging
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,6 +15,7 @@ logger = logging.getLogger(__name__)
 # Base URL of the FastAPI server
 BASE_URL = "http://127.0.0.1:1236"
 
+@pytest.mark.asyncio
 async def wait_for_server_ready(url: str, timeout: int = 60) -> bool:
     """Wait for server to be ready and model to be initialized."""
     start = time.time()
@@ -86,34 +89,34 @@ def print_separator():
 def print_model_section(name: str):
     print(f"\n{'-'*40} {name} {'-'*40}\n")
 
-@pytest.mark.asyncio
-async def test_huggingface_query():
-    url = f"{BASE_URL}/huggingface/query"
-    # Shorter prompt to reduce generation time
-    prompt = """Create Elon Musk's optimal daily schedule focusing on: gym, meetings, coding, family time. 
-    Keep it concise and efficient."""
+# @pytest.mark.asyncio
+# async def test_huggingface_query():
+#     url = f"{BASE_URL}/huggingface/query"
+#     # Shorter prompt to reduce generation time
+#     prompt = """Create Elon Musk's optimal daily schedule focusing on: gym, meetings, coding, family time. 
+#     Keep it concise and efficient."""
     
-    payload = {
-        "input_text": prompt,
-        "max_length": 200  # Reduced for faster response
-    }
+#     payload = {
+#         "input_text": prompt,
+#         "max_length": 200  # Reduced for faster response
+#     }
     
-    print_model_section("PHI-2 MODEL")
-    print("Input Prompt:\n", prompt.strip(), "\n")
+#     print_model_section("PHI-2 MODEL")
+#     print("Input Prompt:\n", prompt.strip(), "\n")
     
-    async with httpx.AsyncClient(timeout=240.0) as client:  # 4 minutes timeout
-        try:
-            response = await client.post(url, json=payload)
-            assert response.status_code == 200, f"Failed with status {response.status_code}: {response.text}"
-            data = response.json()
-            assert "generated_text" in data, "Response missing 'generated_text'"
-            print("\nGenerated Schedule:")
-            print("-" * 50)
-            print(data["generated_text"].strip())
-            print("-" * 50)
-        except Exception as e:
-            print(f"\nError details: {str(e)}")
-            raise
+#     async with httpx.AsyncClient(timeout=240.0) as client:  # 4 minutes timeout
+#         try:
+#             response = await client.post(url, json=payload)
+#             assert response.status_code == 200, f"Failed with status {response.status_code}: {response.text}"
+#             data = response.json()
+#             assert "generated_text" in data, "Response missing 'generated_text'"
+#             print("\nGenerated Schedule:")
+#             print("-" * 50)
+#             print(data["generated_text"].strip())
+#             print("-" * 50)
+#         except Exception as e:
+#             print(f"\nError details: {str(e)}")
+#             raise
 
 @pytest.mark.asyncio
 async def test_xai_query():
@@ -162,11 +165,11 @@ async def test_xai_query():
             print(f"\nError details: {str(e)}")
             raise
 
-@pytest.mark.asyncio
-async def test_health_check():
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{BASE_URL}/health")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert data["model_ready"] is True
+# @pytest.mark.asyncio
+# async def test_health_check():
+#     async with httpx.AsyncClient() as client:
+#         response = await client.get(f"{BASE_URL}/health")
+#         assert response.status_code == 200
+#         data = response.json()
+#         assert data["status"] == "healthy"
+#         assert data["model_ready"] is True

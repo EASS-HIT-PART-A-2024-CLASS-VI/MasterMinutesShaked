@@ -133,21 +133,6 @@ async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem
     # If task_id is not found
     return {"message": "Task not found in the schedule"}
 
-# @app.put("/schedule/{id}")
-# async def update_schedule(id: str, todo_obj: ScheduleItem):  # Use ScheduleItem here
-#     for schedule in saved_schedule.values():
-#         for i,task in enumerate(schedule['schedule']):
-#             if task.task_id == id:
-#                 schedule['schedule'][i] = todo_obj  
-#                 # task.name = todo_obj.name  # Update the name field
-#                 # task.start_time = todo_obj.start_time
-#                 # task.end_time = todo_obj.end_time
-#                 # del schedule['schedule'][i]
-#                 # schedule['schedule'][i].append(todo_obj)
-#                 return {"message": "Schedule updated", "schedule": todo_obj}
-#     return {"message": "Schedule not found"}
-
-
 @app.get("/schedule/{schedule_id}", response_model=OutputSchema)
 async def get_schedule(schedule_id: str):
     """

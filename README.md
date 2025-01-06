@@ -1,4 +1,4 @@
-# 📅 LLM-Powered Task Scheduler API
+# 📅 MasterMinutes: A LLM-Powered Task Scheduler API
 
 A FastAPI-based project that leverages a Large Language Model (LLM) to intelligently schedule tasks based on user-defined constraints. This project aims to automate the task scheduling process, making it more efficient and adaptable.
 

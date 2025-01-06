@@ -19,7 +19,7 @@ app = FastAPI()
 
 
 # Load Google Gemini API key
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyB_S1vLywfhvJjeQPBrj9xwYl7m3Lxxbng")
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "key")
 if not GEMINI_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
 genai.configure(api_key=GEMINI_API_KEY)

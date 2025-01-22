@@ -20,7 +20,7 @@ app = FastAPI()
 
 
 # Load Google Gemini API key
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyCutJo9qvgwK4Y6KWnR7YBg0E1EoRjDwU4")
 if not GEMINI_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
 genai.configure(api_key=GEMINI_API_KEY)
@@ -42,11 +42,12 @@ async def generate_schedule(input_data: InputSchema):
         # Attempt to query the external API
         gemini_input = {
             "messages": [
+                {"role": "system", "parts": [{"text": "Your role is to help schedule tasks over the course of a week, optimizing for efficiency, importance, and balance, while respecting working hours, non-working hours, and required breaks. The schedule MUST be JSON"}]},
                 {"role": "user", "parts": [{"text": f"Please assist in scheduling tasks. here is a json containing my tasks {json.dumps(input_data.dict())}"}]},
             ],
             "model": MODEL_NAME,
             "temperature": 0.5
-        }
+        } 
         try:
             gemini_response = await query_gemini_model(request=GeminiQueryRequest(**gemini_input))
             response_text = gemini_response.get("response_text", None)
@@ -54,10 +55,11 @@ async def generate_schedule(input_data: InputSchema):
             if response_text:
                 # Attempt to load JSON if text is available
                  try:
+                    print(response_text)
                     xai_suggestions=json.loads(response_text)
                  except json.JSONDecodeError:
                     print("Failed to parse the model's output as JSON, using the original tasks instead.")
-                    xai_suggestions= input_data.tasks
+                    xai_suggestions = input_data.tasks
                  #if json was successfully parsed, we can sort by priority
             else:
                 xai_suggestions = input_data.tasks
@@ -248,7 +250,6 @@ async def schedule_tasks(tasks: List[Task], constraints: dict) -> OutputSchema:
 }
 
     return OutputSchema(schedule_id=schedule_id, schedule=schedule, notes="")
-
 
 
 

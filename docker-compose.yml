@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile-fastapi
+    container_name: fastapi_app
+    ports:
+      - "1236:1236"  # Expose FastAPI on host
+    environment:
+      - GOOGLE_API_KEY=AIzaSyCutJo9qvgwK4Y6KWnR7YBg0E1EoRjDwU4
+    networks:
+      - app_network
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile-streamlit
+    container_name: streamlit_app
+    ports:
+      - "8501:8501"  # Expose Streamlit on host
+    depends_on:
+      - fastapi
+    environment:
+      - FASTAPI_BASE_URL=http://fastapi:1236
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

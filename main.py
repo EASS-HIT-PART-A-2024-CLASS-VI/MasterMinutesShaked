@@ -7,252 +7,227 @@ import os
 from typing import Dict, Any
 import uvicorn
 import time
-from moudles import InputSchema, OutputSchema, ScheduleItem
-import uuid
-from moudles import Task
+import datetime
+
+from moudles import InputSchema, OutputSchema, ScheduleItem, Task
 import uuid
 import asyncio
 import google.generativeai as genai
-
-
+import os
+from dotenv import load_dotenv
+import genai
 
 app = FastAPI()
 
+# Load environment variables from .env file
+load_dotenv()
 
-# Load Google Gemini API key
-GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyCutJo9qvgwK4Y6KWnR7YBg0E1EoRjDwU4")
+# Get API key from environment variable
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+
 if not GEMINI_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
+
 genai.configure(api_key=GEMINI_API_KEY)
-MODEL_NAME = "gemini-pro"
+MODEL_NAME = "gemini-1.5-pro-002"
+
 # In-memory storage for GET endpoint
 saved_schedule = {}
-schedules=[]
 
-
-class GeminiQueryRequest(BaseModel):
-    messages: list
-    model: str = MODEL_NAME #defaulting to gemini pro
-    temperature: float = 0.5
-
-
+# POST endpoint to generate a schedule with Gemini handling task scheduling
 @app.post("/schedule", response_model=OutputSchema)
 async def generate_schedule(input_data: InputSchema):
     try:
-        # Attempt to query the external API
+        # Update the prompt to explicitly request JSON format
         gemini_input = {
             "messages": [
-                {"role": "system", "parts": [{"text": "Your role is to help schedule tasks over the course of a week, optimizing for efficiency, importance, and balance, while respecting working hours, non-working hours, and required breaks. The schedule MUST be JSON"}]},
-                {"role": "user", "parts": [{"text": f"Please assist in scheduling tasks. here is a json containing my tasks {json.dumps(input_data.dict())}"}]},
+              
+                {"role": "user", "parts": [{"text": f"Please create a task schedule that starting today based on the following input: {json.dumps(input_data.dict())}"}]},
             ],
             "model": MODEL_NAME,
-            "temperature": 0.5
-        } 
-        try:
-            gemini_response = await query_gemini_model(request=GeminiQueryRequest(**gemini_input))
-            response_text = gemini_response.get("response_text", None)
-            xai_suggestions = []
-            if response_text:
-                # Attempt to load JSON if text is available
-                 try:
-                    print(response_text)
-                    xai_suggestions=json.loads(response_text)
-                 except json.JSONDecodeError:
-                    print("Failed to parse the model's output as JSON, using the original tasks instead.")
-                    xai_suggestions = input_data.tasks
-                 #if json was successfully parsed, we can sort by priority
-            else:
-                xai_suggestions = input_data.tasks
-        except HTTPException as e:
-            if e.status_code == 429:
-                # Fallback logic for local scheduling
-                xai_suggestions = input_data.tasks
-            else:
-                raise e
+            "temperature": 0.1
+        }
+        print(gemini_input)
+        #print(gemini_input['messages'])
+        # gemini_input = {
+        #     "system_instruction":
+        #     {
+        #         "parts": [
+        #             {"text":  """You are a meticulous task scheduler that generates schedules in JSON format. Given a set of tasks and constraints (duration, priority - High > Medium > Low, working hours, and available days), create an optimal schedule that respects working hours, breaks, and task priorities.
 
-        # Use the suggestions from the API or the fallback tasks
-        tasks = sorted(
-            xai_suggestions,
-            key=lambda t: {"high": 3, "medium": 2, "low": 1}.get(t.priority, 0),
-            reverse=True
-        )
+        #         Output a valid JSON array of tasks. Each task object must include the following fields:
 
-        # Scheduling logic...
-        return await schedule_tasks(tasks, input_data.constraints)
+        #         *   `task_id`: A valid UUID (version 4).
+        #         *   `task_name`: The name of the task.
+        #         *   `start_time`: The task's start time (in HH:MM 24-hour format).
+        #         *   `end_time`: The task's end time (in HH:MM 24-hour format).
+        #         *   `priority`: The task's priority (High, Medium, or Low).
+        #         *   `day`: The day of the week (e.g., Monday, Tuesday, etc.).
+        #         *   `date`: The full date (YYYY-MM-DD).
+        #         *   `notes`: (Optional) Any relevant notes about the task.
+
+        #         Include breaks as tasks with `priority: "High"` and a descriptive `task_name` (e.g., "Lunch Break", "Short Break").
+
+        #         Schedule only the provided tasks; do not add filler tasks. It's acceptable to have unscheduled time within the working day.
+
+        #         If all tasks cannot be scheduled in a single day, schedule remaining tasks on subsequent working days. Do not schedule tasks on non-working days.
+
+        #         If a task's duration exceeds the remaining available time in a day, split the task into multiple entries. Each split must:
+
+        #         *   Have the same `task_id`.
+        #         *   Represent a contiguous block of time.
+        #         *   Be scheduled on consecutive working days if necessary.
+
+        #         If a task is split, you have to make sure that only the remainder time is scheduled (e.g., if a three hours task is split such that you complete two hours in one day, the next day should contain one hour exactly, as 3-2=1)
+
+        #         Example of a split task: A 3-hour task with only 2 hours remaining in the day should be split into two entries: one 2-hour entry on the current day and one 1-hour entry on the next working day.
+
+        #         Assume the input will include the following information:
+
+        #         *   `working_hours`: Start and end times of the working day (e.g., "09:00-17:00").
+        #         *   `workdays`: An array of working days (e.g., ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]).
+        #         *   `tasks`: An array of task objects, each with `task_name`, `duration` (in hours), and `priority`.
+
+        #         Prioritize completing higher-priority tasks first. In case of scheduling conflicts, prioritize higher-priority tasks.
+
+        #         Return only the JSON schedule. Do not include any explanatory text or commentary."""
+        #     }]
+        #     },
+        #     "messages": [
+        #         # {"role": "system", "parts": [{"text": "You are a task scheduler that outputs schedules in JSON format. Given a set of tasks and constraints (duration of task, prioritization - high tasks are more important than medium tasks which are more important than low priority tasks, working hours during the workday), please create a schedule that respects working hours, breaks, and task priorities. Ensure the output is a valid JSON array of tasks, each with a task_id (should be a VALID uuid), task_name, start_time, end_time, priority, day (day of the week) and the date (the date of the day of the week), and an optional notes. You should put the break as part of the response (break's priority should be 'high'). You only need to schedule the tasks, do not fill my day with pointless tasks (you don't need to fill out the entire day, it's okay if I still have leftover time). If you cannot schedule all tasks in one day, move them to the next day (but only to valid working days, do not schedule on non-working days). If a task cannot be completed in a continuous manner (e.g., it is three hours long but you only have two hours left in a day), feel free to split it (you can split tasks across the day, and even split them between days - so if for example a task is two hours long but you only have one hour left in a day, schedule one hour in one day and the remaining in the next day - just make sure they have the same task id)"}]},
+        #         {"role": "user", "parts": [{"text": f"Please create a task schedule based on the following input: {json.dumps(input_data.dict())}"}]},
+        #     ],
+        #     "model": MODEL_NAME,
+        #     "temperature": 0.1
+        # }
+
+        # Call Gemini API to generate the schedule
+        gemini_response = await query_gemini_model(request=gemini_input)
+        
+        # Log the raw response for debugging
+        print("Gemini Response (Raw):", gemini_response)
+
+        response_text = gemini_response.get("response_text", None)
+
+        if response_text:
+            # Clean the response to remove any code block markdown
+            cleaned_response_text = response_text.strip("```json").replace("```", "").strip()
+            print(cleaned_response_text)
+            try:
+                # Try to parse the cleaned response as JSON
+                schedule_data = json.loads(cleaned_response_text)
+                schedule_data = {"schedule": schedule_data}
+                print("Parsed Gemini Schedule:", schedule_data)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail=f"Failed to parse Gemini's response into valid JSON. Raw response: {cleaned_response_text}")
+
+            # Ensure that the returned schedule is valid
+            if "schedule" not in schedule_data:
+                raise HTTPException(status_code=400, detail="Gemini's response does not contain a valid schedule.")
+
+            # Store the generated schedule in memory and return it
+            schedule_id = str(uuid.uuid4())
+            saved_schedule[schedule_id] = {
+                "schedule": schedule_data["schedule"],
+                "notes": schedule_data.get("notes", "")
+            }
+
+            return OutputSchema(schedule_id=schedule_id, schedule=schedule_data["schedule"], notes=schedule_data.get("notes", ""))
+
+        else:
+            raise HTTPException(status_code=400, detail="No response text received from Gemini.")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Scheduling failed: {str(e)}")
 
-
+# PUT endpoint to update a task in the schedule
 @app.put("/schedule/{schedule_id}/task/{task_id}")
 async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem):
-    # Check if the schedule exists
     if schedule_id not in saved_schedule:
         return {"message": "Schedule not found"}
 
-    # Access the schedule
     schedule = saved_schedule[schedule_id]["schedule"]
 
-    # Find and update the specific task by task_id
     for idx, task in enumerate(schedule):
-        if task.task_id == task_id:  # Match task_id
-            schedule[idx] = updated_task  # Replace the task
+        if task.task_id == task_id:
+            schedule[idx] = updated_task
             return {"message": "Task updated", "updated_task": updated_task}
 
-    # If task_id is not found
     return {"message": "Task not found in the schedule"}
 
-
+# GET endpoint to fetch the schedule by ID
 @app.get("/schedule/{schedule_id}", response_model=OutputSchema)
 async def get_schedule(schedule_id: str):
-    """
-    Endpoint to fetch the schedule by ID.
-    """
     try:
-        # Check if the schedule_id exists in the saved_schedule dictionary
         if schedule_id not in saved_schedule:
             raise HTTPException(status_code=404, detail="Schedule not found")
-        # Retrieve the schedule and notes from the saved_schedule
         schedule_data = saved_schedule[schedule_id]
-        schedule = schedule_data.get("schedule", [])
-        notes = schedule_data.get("notes", "")
-        #
-        # Return the schedule with the schedule_id
-        return OutputSchema(schedule_id=schedule_id, schedule=schedule, notes=notes)
-
+        return OutputSchema(schedule_id=schedule_id, schedule=schedule_data["schedule"], notes=schedule_data.get("notes", ""))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching schedule: {str(e)}")
 
-
+# Function to query Gemini model
 @app.post("/gemini/query")
-async def query_gemini_model(request: GeminiQueryRequest) -> Dict[str, Any]:
+async def query_gemini_model(request: Dict[str, Any]) -> Dict[str, Any]:
     MAX_RETRIES = 3
     RETRY_DELAY = 5  # seconds
+    today = datetime.date.today()
+    current_hour = datetime.datetime.now().time()
+    system_instruction = f"""You are a meticulous task scheduler that generates schedules in JSON format. Given a set of tasks (name, duration in minutes, priority and optional notes) and constraints (duration, priority - High > Medium > Low, working hours, and available days), create an optimal schedule that respects working hours, breaks, and task priorities.
 
-    model = genai.GenerativeModel(request.model)
+                Output a valid JSON array of tasks. Each task object must include the following fields:
+
+                *   `task_id`: A valid UUID (version 4).
+                *   `task_name`: The name of the task.
+                *   `start_time`: The task's start time (in HH:MM 24-hour format)
+                *   `end_time`: The task's end time (in HH:MM 24-hour format).
+                *   `priority`: The task's priority (High, Medium, or Low).
+                *   `day`: The day of the week (e.g., Monday, Tuesday, etc.).
+                *   `date`: The full date (YYYY-MM-DD) starting from next week ,today (today is {today.strftime("%Y-%m-%d")}) . 
+                *   `notes`: (Optional) Any relevant notes about the task.
+
+                Include breaks as tasks with `priority: "High"` and a descriptive `task_name` (e.g., "Lunch Break", "Short Break").
+
+                Schedule only the provided tasks; do not add filler tasks. It's acceptable to have unscheduled time within the working day.
+
+                If all tasks cannot be scheduled in a single day, schedule remaining tasks on subsequent working days . Do not schedule tasks on non-working days
+
+                If a task's duration exceeds any contiguous block of time available in a given day, just schedule it in the next day at . Every task must be scheduled EXACTLY ONCE!
+                The task that appeared next day should be limit by working_hours and workdays and breaks and priority.
+
+                starting date of the task should next week (today is {today.strftime("%Y-%m-%d")}) 
+                Assume the input will include the following information:
+
+                *   `working_hours`: Start and end times of the working day (e.g., "09:00-17:00").
+                *   `workdays`: An array of working days (e.g., ["Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]).
+                *   `tasks`: An array of task objects, each with `task_name`, `duration` (in hours), and `priority`.
+
+                Prioritize completing higher-priority tasks first. In case of scheduling conflicts, prioritize higher-priority tasks.
+
+                Return only the JSON schedule. Do not include any explanatory text or commentary."""
+    model = genai.GenerativeModel(request["model"], system_instruction=system_instruction)
 
     for attempt in range(MAX_RETRIES):
         try:
-            
-            # Adjust the prompt to use the new structure
-            messages=[{'role': 'user', 'parts': [{'text': message['parts'][0]['text']}]} for message in request.messages]
-            
-            response = model.generate_content(messages, generation_config={"temperature": request.temperature})
-            
+            messages = [{'role': 'user', 'parts': [{'text': message['parts'][0]['text']}]} for message in request["messages"]]
+
+            response = model.generate_content(messages, generation_config={"temperature": request["temperature"]})
+
             if response.text:
                 return {"response_text": response.text}
             else:
-                 print("Failed to process the model response.")
-                 return {}
+                print("Failed to process the model response.")
+                return {}
 
         except Exception as e:
-             if attempt < MAX_RETRIES - 1:
+            if attempt < MAX_RETRIES - 1:
                 await asyncio.sleep(RETRY_DELAY)
-             else:
+            else:
                 raise HTTPException(status_code=500, detail=f"Failed to query Gemini API: {str(e)}")
 
     raise HTTPException(status_code=500, detail="Failed to query Gemini API after multiple retries")
 
-
-async def schedule_tasks(tasks: List[Task], constraints: dict) -> OutputSchema:
-     # Initialize an empty schedule and other necessary variables
-    schedule: List[ScheduleItem] = []
-    current_time = datetime.now()
-    last_end_time = current_time
-    
-    # Get daily start and end time from constraints, default to 9 am and 5 pm if not provided
-    start_time_str = constraints.get("daily_start_time", "09:00")
-    end_time_str = constraints.get("daily_end_time", "17:00")
-
-    # Parse start and end times
-    try:
-      start_time = datetime.strptime(start_time_str, '%H:%M').time()
-      end_time = datetime.strptime(end_time_str, '%H:%M').time()
-    except ValueError as e:
-      raise HTTPException(status_code=400, detail=f"Invalid time format in constraints: {str(e)}")
-
-    # Convert the string representations of breaks into datetime.time
-    breaks = []
-    if "breaks" in constraints:
-      for brk in constraints["breaks"]:
-            try:
-                 break_start_time = datetime.strptime(brk['start'], '%H:%M').time()
-                 break_end_time = datetime.strptime(brk['end'], '%H:%M').time()
-                 breaks.append({'start':break_start_time, 'end':break_end_time})
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=f"Invalid time format in constraints: {str(e)}")
-    
-    # Get workdays
-    workdays = constraints.get("workdays", ["SUN","MON","TUE","WED","THU","FRI","SAT"])
-
-    # Handle multiple days and dates here
-    for task in tasks:
-      task_duration_hours = task.duration_minutes / 60.0
-      
-      # Calculate the start time based on the last end time
-      task_start_time = last_end_time
-
-      # Check if the task_start_time is within the working hours
-      if task_start_time.time() < start_time:
-        task_start_time = task_start_time.replace(hour=start_time.hour, minute=start_time.minute)
-
-       # Adjust if the last_end_time falls outside work hours
-      if last_end_time.time() >= end_time:
-        last_end_time = last_end_time.replace(hour=start_time.hour, minute=start_time.minute)
-        last_end_time += timedelta(days=1)  # Move to next day
-      
-      # Ensure that the task is within the workdays
-      while task_start_time.strftime("%a").upper() not in workdays:
-         task_start_time += timedelta(days=1)
-         last_end_time = task_start_time
-         
-
-      
-      task_end_time = task_start_time + timedelta(hours=task_duration_hours)
-      
-      # Ensure task doesn't overlap breaks
-      for brk in breaks:
-            break_start = task_start_time.replace(hour=brk['start'].hour, minute=brk['start'].minute, second=0, microsecond=0)
-            break_end = task_start_time.replace(hour=brk['end'].hour, minute=brk['end'].minute, second=0, microsecond=0)
-            if break_start < task_end_time and break_end > task_start_time:
-                # Move the task after the break
-                task_start_time = break_end
-                task_end_time = task_start_time + timedelta(hours=task_duration_hours)
-
-      
-      if task_end_time.time() > end_time:
-         # Move the task to the next day and set to start of day
-          task_start_time = task_start_time.replace(hour=start_time.hour, minute=start_time.minute)
-          task_start_time += timedelta(days=1)
-          
-          #Ensure that the task is within the workdays
-          while task_start_time.strftime("%a").upper() not in workdays:
-             task_start_time += timedelta(days=1)
-
-          task_end_time = task_start_time + timedelta(hours=task_duration_hours)
-
-      last_end_time = task_end_time
-    # Append new schedule item to schedule list
-      new_schedule_item = ScheduleItem(
-        task_id=str(uuid.uuid4()),
-        task_name=task.name,
-        start_time=task_start_time.isoformat(),
-        end_time=task_end_time.isoformat(),
-        priority = task.priority,
-        notes=task.notes
-      )
-      schedule.append(new_schedule_item)
-    
-    schedule_id = str(uuid.uuid4())
-
-    saved_schedule[schedule_id] = {
-    "schedule": schedule,
-    "notes": ""
-}
-
-    return OutputSchema(schedule_id=schedule_id, schedule=schedule, notes="")
-
-
-
+# Run the FastAPI application
 if __name__ == "__main__":
     import uvicorn
     try:

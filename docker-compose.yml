@@ -9,7 +9,7 @@ services:
     ports:
       - "1236:1236"  # Expose FastAPI on host
     environment:
-      - GOOGLE_API_KEY=AIzaSyCutJo9qvgwK4Y6KWnR7YBg0E1EoRjDwU4
+      - GOOGLE_API_KEY=AIzaSyDRx8ZlGcjZxrrNiFJf-GgR60-4EX8Olvc
     networks:
       - app_network
 

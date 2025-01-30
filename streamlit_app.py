@@ -17,13 +17,16 @@ def get_schedule(schedule_id):
         return None
 
 # Function to create a new schedule
-def create_schedule(tasks, constraints):
+def create_schedule(tasks, constraints, working_days, start_hour_day, end_hour_day, breaks):
     payload = {
         "tasks": tasks,
-        "constraints": constraints
+        "constraints": constraints,
+        "working_days": working_days,
+        "start_hour_day": start_hour_day,
+        "end_hour_day": end_hour_day,
+        "Breaks": breaks
     }
-    try: 
-        st.error(payload)
+    try:
         response = requests.post(f"{API_URL}/schedule", json=payload)
         response.raise_for_status()
         return response.json()
@@ -31,14 +34,26 @@ def create_schedule(tasks, constraints):
         st.error(f"Failed to create schedule: {e}")
         return None
 
-# Streamlit UI
-st.title("Task Scheduler with Gemini LLM")
+# Inject custom CSS to change the background color to white
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Streamlit application title
+st.title("Task Scheduler")
 
 # Sidebar for adding tasks
-st.sidebar.header("Add Task")
+st.sidebar.header("Add a New Task")
 task_name = st.sidebar.text_input("Task Name")
-task_duration = st.sidebar.number_input("Duration (minutes)", min_value=1, step=1)
-task_priority = st.sidebar.selectbox("Priority", ["low", "medium", "high"])
+task_duration = st.sidebar.number_input("Duration (in minutes)", min_value=1)
+task_priority = st.sidebar.selectbox("Priority", ["High", "Medium", "Low"])
 task_notes = st.sidebar.text_area("Notes (optional)")
 add_task = st.sidebar.button("Add Task")
 
@@ -64,53 +79,37 @@ if add_task:
 st.subheader("Tasks to Schedule")
 if st.session_state["tasks"]:
     for i, task in enumerate(st.session_state["tasks"]):
-        st.write(f"**Task {i+1}:** {task['name']} | Duration: {task['duration_minutes']} mins | Priority: {task['priority']}")
+        st.write(f"{i+1}. {task['name']} - {task['duration_minutes']} minutes - {task['priority']} priority")
 else:
-    st.info("No tasks added yet.")
+    st.write("No tasks added yet.")
 
-# Constraints form
-st.subheader("Constraints")
-daily_start_time = st.time_input("Daily Start Time", value=datetime.now().replace(hour=9, minute=0).time())
-daily_end_time = st.time_input("Daily End Time", value=datetime.now().replace(hour=17, minute=0).time())
-workdays = st.multiselect("Workdays", ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], default=["MON", "TUE", "WED", "THU", "FRI"])
-breaks = []
-st.write("Breaks (optional)")
-break_start_time = st.time_input("Break Start Time", value=None)
-break_end_time = st.time_input("Break End Time", value=None)
-if st.button("Add Break"):
-    st.success(f'{break_start_time}, {break_end_time}')
-    if break_start_time and break_end_time:
-        st.session_state["breaks"].append({"start": break_start_time.strftime("%H:%M"), "end": break_end_time.strftime("%H:%M")})
-        st.success(f"Break added. {st.session_state['breaks']}")
-    else:
-        st.error("Please provide both start and end times for the break.")
-# st.success(f"Breaks: {breaks}")
+# Input form for scheduling constraints
+st.sidebar.header("Scheduling Constraints")
+start_hour_day = st.sidebar.text_input("Start Hour of Day (HH:MM)", value="09:00")
+end_hour_day = st.sidebar.text_input("End Hour of Day (HH:MM)", value="17:00")
+working_days = st.sidebar.multiselect("Working Days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], default=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+constraints = st.sidebar.text_area("Constraints (JSON format)", value="{}")
+breaks = st.sidebar.text_area("Breaks (JSON format)", value="[]")
+schedule_button = st.sidebar.button("Create Schedule")
 
-# Submit button
-if st.button("Generate Schedule"):
-    # st.success(f"Breaks: {breaks}")
-    constraints = {
-        "daily_start_time": daily_start_time.strftime("%H:%M"),
-        "daily_end_time": daily_end_time.strftime("%H:%M"),
-        "workdays": workdays,
-        "breaks": st.session_state["breaks"]
-    }
+if schedule_button:
+    try:
+        constraints_dict = json.loads(constraints)
+        breaks_list = json.loads(breaks)
+        schedule = create_schedule(st.session_state["tasks"], constraints_dict, working_days, start_hour_day, end_hour_day, breaks_list)
+        if schedule:
+            print("scheduleeeee:" + json.dumps(schedule))
+            st.success("Schedule created successfully!")
+            st.json(schedule)
+    except json.JSONDecodeError as e:
+        st.sidebar.error(f"Invalid JSON format: {e}")
 
-    st.success(f"{constraints}")
-    
+# Display the schedule
+st.header("Schedule")
+schedule_id = st.text_input("Enter Schedule ID to fetch")
+fetch_button = st.button("Fetch Schedule")
 
-
-    result = create_schedule(st.session_state["tasks"], constraints)
-    if result:
-        st.success("Schedule created successfully!")
-        schedule_id = result.get("schedule_id")
-        st.write(f"**Schedule ID:** {schedule_id}")
-        st.session_state["current_schedule_id"] = schedule_id
-
-# Display schedule if generated
-if "current_schedule_id" in st.session_state:
-    st.subheader("Generated Schedule")
-    schedule = get_schedule(st.session_state["current_schedule_id"])
+if fetch_button and schedule_id:
+    schedule = get_schedule(schedule_id)
     if schedule:
-        for item in schedule["schedule"]:
-            st.write(f"**Task:** {item['task_name']} | **Start:** {item['start_time']} | **End:** {item['end_time']} | **Priority:** {item['priority']}")
+        st.json(schedule)

@@ -15,7 +15,9 @@ class InputSchema(BaseModel):
     tasks: List[Task]
     constraints: dict
     working_days: Optional[List[str]] = None  # Defaults to None if not provided
-
+    start_hour_day: str  # Start day of the schedule
+    end_hour_day: str  # End day of the schedule
+    Breaks: Optional[List[Break]] = None
 
 class ScheduleItem(BaseModel):
     task_id: str
@@ -23,6 +25,8 @@ class ScheduleItem(BaseModel):
     start_time: str
     end_time: str
     priority: str
+    day: str
+    date: str
     notes: Optional[str] = None
 
 class OutputSchema(BaseModel):

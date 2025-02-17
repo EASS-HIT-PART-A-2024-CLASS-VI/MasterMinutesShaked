@@ -2,17 +2,41 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 import uuid
+from sqlalchemy import Column, String, Integer, Date, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-class Task(BaseModel):
+Base = declarative_base()
+
+class Task(Base):
+    __tablename__ = 'tasks'
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, index=True)
+    duration_minutes = Column(Integer)
+    priority = Column(String)
+    notes = Column(String, nullable=True)
+    date = Column(Date)
+
+DATABASE_URL = "sqlite:///./test.db"
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base.metadata.create_all(bind=engine)
+
+# Pydantic models for request and response validation
+class TaskSchema(BaseModel):
     name: str
     duration_minutes: int
     priority: str
     notes: Optional[str] = None
+
 class Break(BaseModel):
     start: str
     end: str
+
 class InputSchema(BaseModel):
-    tasks: List[Task]
+    tasks: List[TaskSchema]
     constraints: dict
     working_days: Optional[List[str]] = None  # Defaults to None if not provided
     start_hour_day: str  # Start day of the schedule

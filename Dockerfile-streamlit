@@ -5,11 +5,10 @@ FROM python:3.11-slim-buster AS streamlit-builder
 WORKDIR /app
 
 # Copy the requirements file first
-COPY requirements.txt .
+COPY streamlit_requirements.txt .
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install streamlit
+RUN pip install --no-cache-dir -r streamlit_requirements.txt
 
 # Copy the rest of the project files
 COPY . .

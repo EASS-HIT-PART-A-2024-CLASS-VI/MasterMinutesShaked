@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy import Column, String, Integer, Date, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import os
 
 Base = declarative_base()
 
@@ -12,13 +13,17 @@ class Task(Base):
     __tablename__ = 'tasks'
     id = Column(String, primary_key=True, index=True)
     name = Column(String, index=True)
-    duration_minutes = Column(Integer)
+    start_time = Column(String)
+    end_time = Column(String)
+    # duration_minutes = Column(Integer)
     priority = Column(String)
     notes = Column(String, nullable=True)
     date = Column(Date)
 
-DATABASE_URL = "sqlite:///./test.db"
-
+from dotenv import load_dotenv
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+print(DATABASE_URL)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

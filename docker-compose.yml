@@ -10,8 +10,13 @@ services:
       - "1236:1236"  # Expose FastAPI on host
     environment:
       - GOOGLE_API_KEY=AIzaSyDRx8ZlGcjZxrrNiFJf-GgR60-4EX8Olvc
+      - DATABASE_URL=postgresql://postgres:password@db:5432/tasks_db
+      - REDIS_URL=redis://redis:6379/0
     networks:
       - app_network
+    depends_on:
+      - db
+      - redis
 
   streamlit:
     build:
@@ -24,6 +29,26 @@ services:
       - fastapi
     environment:
       - FASTAPI_BASE_URL=http://fastapi:1236
+    networks:
+      - app_network
+
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tasks_db
+    ports:
+      - "5432:5432"
+    networks:
+      - app_network
+  
+  redis:
+    image: redis:7
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
     networks:
       - app_network
 

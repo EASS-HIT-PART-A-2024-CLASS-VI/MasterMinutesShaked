@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 import json
@@ -10,6 +10,7 @@ import asyncio
 import google.generativeai as genai
 from dotenv import load_dotenv
 import uvicorn
+import redis
 
 from moudles import InputSchema, OutputSchema, ScheduleItem, Task, SessionLocal
 
@@ -20,12 +21,13 @@ load_dotenv()
 
 # Get API key from environment variable
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
+REDIS_URL = os.getenv("REDIS_URL")
 
 if not GEMINI_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
 
 genai.configure(api_key=GEMINI_API_KEY)
-MODEL_NAME = "gemini-1.5-pro-002"
+MODEL_NAME = "gemini-1.5-flash-002"
 
 # Dependency to get the database session
 def get_db():
@@ -34,6 +36,19 @@ def get_db():
         yield db
     finally:
         db.close()
+
+redis_client = redis.Redis.from_url(REDIS_URL)
+
+# Helper function to cache data in Redis
+def cache_data(key: str, data: dict, expiration: int = 3600):
+    redis_client.setex(key, expiration, json.dumps(data))
+
+# Helper function to get data from Redis cache
+def get_cached_data(key: str) -> Optional[dict]:
+    cached_data = redis_client.get(key)
+    if cached_data:
+        return json.loads(cached_data)
+    return None
 
 # POST endpoint to generate a schedule with Gemini handling task scheduling
 @app.post("/schedule", response_model=OutputSchema)
@@ -75,17 +90,21 @@ async def generate_schedule(input_data: InputSchema, db: Session = Depends(get_d
 
             # Save the generated schedule to the database
             schedule_id = str(uuid.uuid4())
+            print(schedule_data)
             for task in schedule_data["schedule"]:
                 db_task = Task(
                     id=task["task_id"],
                     name=task["task_name"],
-                    duration_minutes=task["duration_minutes"],
+                    start_time = task["start_time"],
+                    end_time = task["end_time"],
+                    # duration_minutes=task["duration_minutes"],
                     priority=task["priority"],
                     notes=task.get("notes"),
                     date=datetime.strptime(task["date"], "%Y-%m-%d").date()
                 )
                 db.add(db_task)
             db.commit()
+            cache_data(schedule_id, schedule_data)
 
             return OutputSchema(schedule_id=schedule_id, schedule=schedule_data["schedule"], notes=schedule_data.get("notes", ""))
 
@@ -114,6 +133,10 @@ async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem
 # GET endpoint to fetch the schedule by ID
 @app.get("/schedule/{schedule_id}", response_model=OutputSchema)
 async def get_schedule(schedule_id: str, db: Session = Depends(get_db)):
+    cached_schedule = get_cached_data(schedule_id)
+    if cached_schedule:
+        return OutputSchema(schedule_id=schedule_id, schedule=cached_schedule["schedule"], notes=cached_schedule.get("notes"))
+
     tasks = db.query(Task).filter(Task.schedule_id == schedule_id).all()
     if not tasks:
         raise HTTPException(status_code=404, detail="Schedule not found")
@@ -129,6 +152,8 @@ async def get_schedule(schedule_id: str, db: Session = Depends(get_db)):
         notes=task.notes
     ) for task in tasks]
 
+    cache_data(schedule_id, {"schedule": schedule})
+
     return OutputSchema(schedule_id=schedule_id, schedule=schedule, notes=None)
 
 # Function to query Gemini model
@@ -136,8 +161,8 @@ async def get_schedule(schedule_id: str, db: Session = Depends(get_db)):
 async def query_gemini_model(request: Dict[str, Any]) -> Dict[str, Any]:
     MAX_RETRIES = 3
     RETRY_DELAY = 5  # seconds
-    today = datetime.date.today()
-    current_hour = datetime.datetime.now().time()
+    today = date.today()
+    current_hour = datetime.now().time()
     system_instruction = f"""You are a meticulous task scheduler that generates schedules in JSON format. Given a set of tasks (name, duration in minutes, priority and optional notes) and constraints (duration, priority - High > Medium > Low, working hours, and available days), create an optimal schedule that respects working hours, breaks, and task priorities.
 
                 Output a valid JSON array of tasks. Each task object must include the following fields:
@@ -157,10 +182,10 @@ async def query_gemini_model(request: Dict[str, Any]) -> Dict[str, Any]:
 
                 If all tasks cannot be scheduled in a single day, schedule remaining tasks on subsequent working days . Do not schedule tasks on non-working days
 
-                If a task's duration exceeds any contiguous block of time available in a given day, just schedule it in the next day at . Every task must be scheduled EXACTLY ONCE!
+                If a task's duration exceeds any contiguous block of time available in a given day, just schedule it in the next day. Every task must be scheduled EXACTLY ONCE!
                 The task that appeared next day should be limit by working_hours and workdays and breaks and priority.
 
-                starting date of the task should next week (today is {today.strftime("%Y-%m-%d")}) 
+                starting date of the task should be next week (today is {today.strftime("%Y-%m-%d")}). 
                 Assume the input will include the following information:
 
                 *   `working_hours`: Start and end times of the working day (e.g., "09:00-17:00").

@@ -12,6 +12,7 @@ services:
       - GOOGLE_API_KEY=AIzaSyDRx8ZlGcjZxrrNiFJf-GgR60-4EX8Olvc
       - DATABASE_URL=postgresql://postgres:password@db:5432/tasks_db
       - REDIS_URL=redis://redis:6379/0
+      
     networks:
       - app_network
     depends_on:

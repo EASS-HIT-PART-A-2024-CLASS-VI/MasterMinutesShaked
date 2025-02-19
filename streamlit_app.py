@@ -87,7 +87,7 @@ else:
 st.sidebar.header("Scheduling Constraints")
 start_hour_day = st.sidebar.text_input("Start Hour of Day (HH:MM)", value="09:00")
 end_hour_day = st.sidebar.text_input("End Hour of Day (HH:MM)", value="17:00")
-working_days = st.sidebar.multiselect("Working Days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], default=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
+working_days = st.sidebar.multiselect("Working Days", ["Sunday","Monday", "Tuesday", "Wednesday", "Thursday"], default=["Sunday","Monday", "Tuesday", "Wednesday", "Thursday"])
 constraints = st.sidebar.text_area("Constraints (JSON format)", value="{}")
 breaks = st.sidebar.text_area("Breaks (JSON format)", value="[]")
 schedule_button = st.sidebar.button("Create Schedule")

@@ -11,6 +11,8 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import uvicorn
 import redis
+from telegram import Bot
+
 
 from moudles import InputSchema, OutputSchema, ScheduleItem, Task, SessionLocal
 
@@ -19,12 +21,18 @@ app = FastAPI()
 # Load environment variables from .env file
 load_dotenv()
 
-# Get API key from environment variable
+# Get API keys and URLs from environment variables
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 REDIS_URL = os.getenv("REDIS_URL")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+print(TELEGRAM_CHAT_ID)
+
 
 if not GEMINI_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
+
+
 
 genai.configure(api_key=GEMINI_API_KEY)
 MODEL_NAME = "gemini-1.5-flash-002"
@@ -32,6 +40,7 @@ MODEL_NAME = "gemini-1.5-flash-002"
 # Dependency to get the database session
 def get_db():
     db = SessionLocal()
+    print('a')
     try:
         yield db
     finally:
@@ -49,6 +58,17 @@ def get_cached_data(key: str) -> Optional[dict]:
     if cached_data:
         return json.loads(cached_data)
     return None
+# Helper function to send schedule to Telegram
+def send_schedule_to_telegram(schedule: dict):
+    message = "Here is your schedule:\n\n"
+    for task in schedule["schedule"]:
+        message += f"Task: {task['task_name']}\n"
+        message += f"Start Time: {task['start_time']}\n"
+        message += f"End Time: {task['end_time']}\n"
+        message += f"Priority: {task['priority']}\n"
+        message += f"Date: {task['date']}\n"
+        message += f"Notes: {task.get('notes', 'None')}\n\n"
+    Bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
 
 # POST endpoint to generate a schedule with Gemini handling task scheduling
 @app.post("/schedule", response_model=OutputSchema)
@@ -93,7 +113,7 @@ async def generate_schedule(input_data: InputSchema, db: Session = Depends(get_d
             print(schedule_data)
             for task in schedule_data["schedule"]:
                 db_task = Task(
-                    id=task["task_id"],
+                    id=str(uuid.uuid4()),  # Generate a unique UUID for each task
                     name=task["task_name"],
                     start_time = task["start_time"],
                     end_time = task["end_time"],
@@ -105,6 +125,7 @@ async def generate_schedule(input_data: InputSchema, db: Session = Depends(get_d
                 db.add(db_task)
             db.commit()
             cache_data(schedule_id, schedule_data)
+            send_schedule_to_telegram(schedule_data)
 
             return OutputSchema(schedule_id=schedule_id, schedule=schedule_data["schedule"], notes=schedule_data.get("notes", ""))
 
@@ -163,38 +184,87 @@ async def query_gemini_model(request: Dict[str, Any]) -> Dict[str, Any]:
     RETRY_DELAY = 5  # seconds
     today = date.today()
     current_hour = datetime.now().time()
-    system_instruction = f"""You are a meticulous task scheduler that generates schedules in JSON format. Given a set of tasks (name, duration in minutes, priority and optional notes) and constraints (duration, priority - High > Medium > Low, working hours, and available days), create an optimal schedule that respects working hours, breaks, and task priorities.
+    system_instruction = f"""You are a task scheduler that generates JSON schedules using the Pomodoro technique.
+Given a list of tasks (`task_name`, `duration` in minutes, `priority`, and optional `notes`) and constraints 
+(`working_hours`, `workdays`), create an optimized schedule that:
 
-                Output a valid JSON array of tasks. Each task object must include the following fields:
+- **Breaks all tasks into 25-minute Pomodoro sessions**, inserting **a 5–10 minute break after each**.
+- **Ensures all task time is fully scheduled** without exceeding the total duration.
+- **Handles remaining minutes correctly**:
+  - If a task’s duration **is a multiple of 25**, schedule Pomodoro sessions normally.
+  - If a task’s duration **is not a multiple of 25**, schedule full 25-minute Pomodoro sessions first, then schedule the remaining time as a final shorter session.
+- **No consecutive 25-minute sessions without a break**—every Pomodoro session must be followed by a short break.
+- **Schedules the next available task as soon as possible** within working hours (no unnecessary gaps).
+- **Prioritizes tasks (High > Medium > Low)** and efficiently fills available time.
+- Moves sessions to the next available workday if no contiguous time block is available.
+- Includes breaks as tasks with `priority: "High"` (e.g., "Short Break", "Lunch Break").
+- Starts scheduling from **next week** (today is {today.strftime("%Y-%m-%d")}).
 
-                *   `task_id`: A valid UUID (version 4).
-                *   `task_name`: The name of the task.
-                *   `start_time`: The task's start time (in HH:MM 24-hour format)
-                *   `end_time`: The task's end time (in HH:MM 24-hour format).
-                *   `priority`: The task's priority (High, Medium, or Low).
-                *   `day`: The day of the week (e.g., Monday, Tuesday, etc.).
-                *   `date`: The full date (YYYY-MM-DD) starting from next week ,today (today is {today.strftime("%Y-%m-%d")}) . 
-                *   `notes`: (Optional) Any relevant notes about the task.
+### **Output Format**
+Output a JSON array of scheduled Pomodoro sessions and breaks. Each session is a separate task object containing:
+- `task_id`: UUID v4
+- `task_name`: Task name
+- `start_time`, `end_time`: HH:MM format (24-hour)
+- `priority`: High, Medium, or Low
+- `day`: Day of the week
+- `date`: YYYY-MM-DD
+- `notes`: (Optional) Task notes
 
-                Include breaks as tasks with `priority: "High"` and a descriptive `task_name` (e.g., "Lunch Break", "Short Break").
+### **Task Splitting Formula**
+For a task with `X` total minutes:
+1. **Divide X by 25** → This gives the number of full Pomodoro sessions (`N`).
+2. **The remainder R = X - (N × 25)**:
+   - If `R = 0`, schedule `N` full Pomodoro sessions.
+   - If `R > 0`, schedule `N` full Pomodoro sessions + **one final session of R minutes**.
+3. **Every 25-minute session must be followed by a short break (5–10 minutes).**
+4. **Ensure all scheduled time exactly matches X—do not exceed or lose minutes.**
 
-                Schedule only the provided tasks; do not add filler tasks. It's acceptable to have unscheduled time within the working day.
+### **Examples**
+#### **Example 1: "Team Meeting" (90 minutes)**
+90 ÷ 25 = 3 full sessions, remainder 15 → Schedule as:
+- **Session 1:** 25 minutes (09:00–09:25)
+- **Short Break:** 5 minutes (09:25–09:30)
+- **Session 2:** 25 minutes (09:30–09:55)
+- **Short Break:** 5 minutes (09:55–10:00)
+- **Session 3:** 25 minutes (10:00–10:25)
+- **Short Break:** 5 minutes (10:25–10:30)
+- **Final Session:** 15 minutes (10:30–10:45)
 
-                If all tasks cannot be scheduled in a single day, schedule remaining tasks on subsequent working days . Do not schedule tasks on non-working days
+#### **Example 2: "Weekly Sync" (60 minutes)**
+60 ÷ 25 = 2 full sessions, remainder 10 → Schedule as:
+- **Session 1:** 25 minutes (10:45–11:10)
+- **Short Break:** 5 minutes (11:10–11:15)
+- **Session 2:** 25 minutes (11:15–11:40)
+- **Short Break:** 5 minutes (11:40–11:45)
+- **Final Session:** 10 minutes (11:45–11:55)
 
-                If a task's duration exceeds any contiguous block of time available in a given day, just schedule it in the next day. Every task must be scheduled EXACTLY ONCE!
-                The task that appeared next day should be limit by working_hours and workdays and breaks and priority.
+#### **Example 3: "Code Review" (45 minutes)**
+45 ÷ 25 = 1 full session, remainder 20 → Schedule as:
+- **Session 1:** 25 minutes (11:55–12:20)
+- **Short Break:** 5 minutes (12:20–12:25)
+- **Final Session:** 20 minutes (12:25–12:45)
 
-                starting date of the task should be next week (today is {today.strftime("%Y-%m-%d")}). 
-                Assume the input will include the following information:
+#### **Example 4: "Deep Work" (120 minutes)**
+120 ÷ 25 = 4 full sessions, remainder 0 → Schedule as:
+- **Session 1:** 25 minutes (13:00–13:25)
+- **Short Break:** 5 minutes (13:25–13:30)
+- **Session 2:** 25 minutes (13:30–13:55)
+- **Short Break:** 5 minutes (13:55–14:00)
+- **Session 3:** 25 minutes (14:00–14:25)
+- **Short Break:** 5 minutes (14:25–14:30)
+- **Session 4:** 25 minutes (14:30–14:55)
+- **Short Break:** 5 minutes (14:55–15:00)
 
-                *   `working_hours`: Start and end times of the working day (e.g., "09:00-17:00").
-                *   `workdays`: An array of working days (e.g., ["Sunday","Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]).
-                *   `tasks`: An array of task objects, each with `task_name`, `duration` (in hours), and `priority`.
+> ⚠ **Do not schedule an extra 25-minute session if only 10, 15, or 20 minutes remain. Use the exact remaining time as the final session.**
 
-                Prioritize completing higher-priority tasks first. In case of scheduling conflicts, prioritize higher-priority tasks.
+### **Additional Constraints**
+- **No unnecessary gaps**—schedule the next available task immediately if time allows.
+- **Higher-priority tasks take precedence** in case of conflicts.
+- **Return only the JSON schedule—no explanations or extra text.**
+"""
 
-                Return only the JSON schedule. Do not include any explanatory text or commentary."""
+
+
     model = genai.GenerativeModel(request["model"], system_instruction=system_instruction)
 
     for attempt in range(MAX_RETRIES):
@@ -216,6 +286,59 @@ async def query_gemini_model(request: Dict[str, Any]) -> Dict[str, Any]:
                 raise HTTPException(status_code=500, detail=f"Failed to query Gemini API: {str(e)}")
 
     raise HTTPException(status_code=500, detail="Failed to query Gemini API after multiple retries")
+@app.on_event("startup")
+async def start_notification_service():
+    # This creates a background asyncio task that will run alongside your FastAPI endpoints.
+    asyncio.create_task(notification_loop())
+
+async def notification_loop():
+    """Periodically check for tasks starting in 10 minutes and send notifications."""
+    while True:
+        await check_and_send_notifications()
+        await asyncio.sleep(60)  # Wait 60 seconds before checking again
+
+async def check_and_send_notifications():
+    """Check the database for tasks that are scheduled to start in 10 minutes and send a Telegram reminder."""
+    session = SessionLocal()
+    try:
+        now = datetime.now()
+        # Calculate the target time (10 minutes from now)
+        # target_time = now + timedelta(minutes=10)
+        # We create a window [target_time, target_time + 1 minute) to catch tasks scheduled at that minute.
+        lower_bound = now.replace(second=0, microsecond=0)
+        upper_bound = lower_bound + timedelta(minutes=11)
+
+        # Query all tasks (in a more advanced version, filter by date and notified status)
+        tasks = session.query(Task).all()
+        if not tasks:
+            print("no tasks found")
+            return  # No tasks found
+
+        # Initialize the Telegram Bot
+        bot = Bot(token=TELEGRAM_TOKEN)
+
+        for task in tasks:
+            try:
+                # Combine the task's date and start_time string (assumed to be in "HH:MM" format)
+                task_time = datetime.combine(task.date, datetime.strptime(task.start_time, "%H:%M").time())
+                # Check if the task's scheduled datetime falls within our target window.
+                if lower_bound <= task_time < upper_bound:
+                    message = (
+                        f"Reminder: Your task '{task.name}' is scheduled to start at "
+                        f"{task.start_time} on {task.date.strftime('%Y-%m-%d')}."
+                    )
+                    print(message)
+                    print(TELEGRAM_CHAT_ID)
+                    await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+                    print(f"Sent notification for task {task.id}")
+                    # Optionally update the task (e.g., task.notified = True) to avoid sending duplicate notifications.
+            except Exception as e:
+                print(f"Error processing task {task.id}: {e}")
+        session.commit()
+    except Exception as e:
+        print(f"Error in notification service: {e}")
+    finally:
+        session.close()
 
 # Run the FastAPI application
 if __name__ == "__main__":

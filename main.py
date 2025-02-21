@@ -12,7 +12,8 @@ from dotenv import load_dotenv
 import uvicorn
 import redis
 from telegram import Bot
-
+from fastapi.security import OAuth2PasswordRequestForm
+from auth import Token, authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user, fake_users_db
 
 from moudles import InputSchema, OutputSchema, ScheduleItem, Task, SessionLocal
 
@@ -24,10 +25,12 @@ load_dotenv()
 # Get API keys and URLs from environment variables
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 REDIS_URL = os.getenv("REDIS_URL")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-print(TELEGRAM_CHAT_ID)
 
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+print(DATABASE_URL, GEMINI_API_KEY, REDIS_URL)
 
 if not GEMINI_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
@@ -72,7 +75,10 @@ def send_schedule_to_telegram(schedule: dict):
 
 # POST endpoint to generate a schedule with Gemini handling task scheduling
 @app.post("/schedule", response_model=OutputSchema)
-async def generate_schedule(input_data: InputSchema, db: Session = Depends(get_db)):
+async def generate_schedule(input_data: InputSchema,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user)):
+   
     try:
         # Update the prompt to explicitly request JSON format
         gemini_input = {
@@ -339,6 +345,17 @@ async def check_and_send_notifications():
         print(f"Error in notification service: {e}")
     finally:
         session.close()
+@app.post("/token", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    # Authenticate the user using the fake users database.
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    if not user:
+         raise HTTPException(status_code=400, detail="Incorrect username or password")
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+         data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # Run the FastAPI application
 if __name__ == "__main__":

@@ -64,3 +64,5 @@ class OutputSchema(BaseModel):
     schedule_id: str
     schedule: List[ScheduleItem]
     notes: Optional[str] = None
+
+    

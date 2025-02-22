@@ -1,0 +1,7 @@
+[browser]
+serverAddress = "0.0.0.0"
+serverPort = 8501
+
+[server]
+enableCORS = true
+enableXsrfProtection = false

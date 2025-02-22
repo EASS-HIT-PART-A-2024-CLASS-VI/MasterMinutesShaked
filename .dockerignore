@@ -4,12 +4,9 @@ __pycache__
 *.pyo
 *.pyd
 
-# Ignore environment files
-.env
 
 # Ignore your virtual environment folder (if present)
 venv/
-.env/
 *.egg-info
 
 node_modules/

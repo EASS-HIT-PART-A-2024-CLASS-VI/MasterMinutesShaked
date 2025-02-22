@@ -1,21 +1,17 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim-buster AS streamlit-builder
+FROM python:3.11-slim
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file first
-COPY streamlit_requirements.txt .
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Install dependencies
-RUN pip install --no-cache-dir -r streamlit_requirements.txt
+# Copy the Streamlit app and config
+COPY streamlit_app.py .
+COPY .streamlit/ .streamlit/
 
-# Copy the rest of the project files
-COPY . .
-
-# Expose the port for Streamlit
+# Expose port
 EXPOSE 8501
 
-# Command to run the application
-# You'll need to have a streamlit app file, e.g., `streamlit_app.py`
-CMD ["streamlit", "run", "streamlit_app.py","--server.address","0.0.0.0","--server.port","8501"]
+# Command to run Streamlit
+CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]

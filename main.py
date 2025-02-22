@@ -13,7 +13,7 @@ import uvicorn
 import redis
 from telegram import Bot
 from fastapi.security import OAuth2PasswordRequestForm
-from auth import Token, authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user, fake_users_db
+from auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user
 
 from moudles import InputSchema, OutputSchema, ScheduleItem, Task, SessionLocal
 
@@ -38,12 +38,11 @@ if not GEMINI_API_KEY:
 
 
 genai.configure(api_key=GEMINI_API_KEY)
-MODEL_NAME = "gemini-1.5-flash-002"
+MODEL_NAME = "gemini-1.5-pro-002"
 
 # Dependency to get the database session
 def get_db():
     db = SessionLocal()
-    print('a')
     try:
         yield db
     finally:
@@ -61,6 +60,7 @@ def get_cached_data(key: str) -> Optional[dict]:
     if cached_data:
         return json.loads(cached_data)
     return None
+
 # Helper function to send schedule to Telegram
 def send_schedule_to_telegram(schedule: dict):
     message = "Here is your schedule:\n\n"
@@ -143,7 +143,8 @@ async def generate_schedule(input_data: InputSchema,
 
 # PUT endpoint to update a task in the schedule
 @app.put("/schedule/{schedule_id}/task/{task_id}")
-async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem, db: Session = Depends(get_db)):
+async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem, db: Session = Depends(get_db),
+                      current_user=Depends(get_current_active_user)):
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -159,7 +160,7 @@ async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem
 
 # GET endpoint to fetch the schedule by ID
 @app.get("/schedule/{schedule_id}", response_model=OutputSchema)
-async def get_schedule(schedule_id: str, db: Session = Depends(get_db)):
+async def get_schedule(schedule_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_active_user)):
     cached_schedule = get_cached_data(schedule_id)
     if cached_schedule:
         return OutputSchema(schedule_id=schedule_id, schedule=cached_schedule["schedule"], notes=cached_schedule.get("notes"))
@@ -292,6 +293,7 @@ For a task with `X` total minutes:
                 raise HTTPException(status_code=500, detail=f"Failed to query Gemini API: {str(e)}")
 
     raise HTTPException(status_code=500, detail="Failed to query Gemini API after multiple retries")
+
 @app.on_event("startup")
 async def start_notification_service():
     # This creates a background asyncio task that will run alongside your FastAPI endpoints.
@@ -345,17 +347,63 @@ async def check_and_send_notifications():
         print(f"Error in notification service: {e}")
     finally:
         session.close()
+
+# @app.post("/token", response_model=Token)
+# async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+#     # Authenticate the user using the fake users database.
+#     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+#     if not user:
+#          raise HTTPException(status_code=400, detail="Incorrect username or password")
+#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+#     access_token = create_access_token(
+#          data={"sub": user.username}, expires_delta=access_token_expires
+#     )
+#     return {"access_token": access_token, "token_type": "bearer"}
+
+from moudles import UserCreate, UserOut, Token
+from moudles import User
+from auth import (
+    get_password_hash,
+    verify_password,
+    create_access_token,
+    get_db,
+    get_current_active_user,
+    get_user,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+)
+from fastapi.security import OAuth2PasswordRequestForm
+
+@app.post("/register", response_model=UserOut)
+def register(user_create: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == user_create.username).first()
+    if db_user:
+         raise HTTPException(status_code=400, detail="Username already registered")
+    hashed_password = get_password_hash(user_create.password)
+    new_user = User(
+        username=user_create.username,
+        email=user_create.email,
+        hashed_password=hashed_password
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+
 @app.post("/token", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # Authenticate the user using the fake users database.
-    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
-    if not user:
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = get_user(db, form_data.username)
+    if not user or not verify_password(form_data.password, user.hashed_password):
          raise HTTPException(status_code=400, detail="Incorrect username or password")
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-         data={"sub": user.username}, expires_delta=access_token_expires
-    )
+    access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+import moudles as models
+@app.get("/users/me", response_model=UserOut)
+def read_users_me(current_user: models.User = Depends(get_current_active_user)):
+    return current_user
 
 # Run the FastAPI application
 if __name__ == "__main__":

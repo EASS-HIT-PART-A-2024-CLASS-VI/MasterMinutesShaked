@@ -2,12 +2,13 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 import uuid
-from sqlalchemy import Column, String, Integer, Date, create_engine
+from sqlalchemy import Column, String, Integer, Date, Boolean, DateTime, func, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 import asyncio
 from datetime import datetime, timedelta
+import uuid
 
 Base = declarative_base()
 
@@ -21,6 +22,15 @@ class Task(Base):
     priority = Column(String)
     notes = Column(String, nullable=True)
     date = Column(Date)
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -65,4 +75,26 @@ class OutputSchema(BaseModel):
     schedule: List[ScheduleItem]
     notes: Optional[str] = None
 
-    
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+
+class UserBase(BaseModel):
+    username: str
+    email: EmailStr
+
+class UserCreate(UserBase):
+    password: str
+
+class UserOut(UserBase):
+    id: str
+    is_active: bool
+
+class Config:
+    orm_mode = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: Optional[str] = None

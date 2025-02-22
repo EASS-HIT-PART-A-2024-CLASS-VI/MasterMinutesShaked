@@ -24,13 +24,15 @@ services:
       dockerfile: Dockerfile-streamlit
     container_name: streamlit_app
     ports:
-      - "8501:8501"  # Expose Streamlit on host
-    depends_on:
-      - fastapi
+      - "8501:8501"
     environment:
       - FASTAPI_BASE_URL=http://fastapi:1236
     networks:
       - app_network
+    volumes:
+      - .:/app
+    depends_on:
+      - fastapi
 
   db:
     image: postgres:15

@@ -1,19 +1,35 @@
 import streamlit as st
 import requests
-from datetime import datetime, timedelta
 import json
+import os
 
 # Base URL of the FastAPI backend
 API_URL = "http://fastapi:1236"
-# Add this right after your imports
-#st.write("Debug Mode")
-#st.write("Current session state:", st.session_state)
 st.write("API URL:", API_URL)
 
-# Modify your login_user function to include more debugging
+# Initialize session state variables
+if "token" not in st.session_state:
+    st.session_state["token"] = None
+if "tasks" not in st.session_state:
+    st.session_state["tasks"] = []
+if "breaks" not in st.session_state:
+    st.session_state["breaks"] = []
+
+# -------------------------------
+# Helper: Safe rerun function
+# -------------------------------
+def safe_rerun():
+    if hasattr(st, "experimental_rerun"):
+        st.experimental_rerun()
+    else:
+        st.warning("Auto rerun is not supported by your Streamlit version. Please refresh the browser manually.")
+
+# -------------------------------
+# Authentication Functions
+# -------------------------------
 def login_user(username, password):
+    st.write("Attempting to connect to:", f"{API_URL}/token")
     try:
-        st.write("Attempting to connect to:", f"{API_URL}/token")
         response = requests.post(
             f"{API_URL}/token",
             data={"username": username, "password": password},
@@ -28,76 +44,67 @@ def login_user(username, password):
         st.error(f"Login failed: {str(e)}")
         st.write("Full error details:", e.__dict__)
         return None
-# Initialize session state variables
-if "token" not in st.session_state:
-    st.session_state["token"] = None
-if "tasks" not in st.session_state:
-    st.session_state["tasks"] = []
-if "breaks" not in st.session_state:
-    st.session_state["breaks"] = []
 
-# Function to call the login endpoint and get a token
-def login_user(username, password):
-    try:
-        # FastAPI expects form data for the token endpoint
-        response = requests.post(
-            f"{API_URL}/token",
-            data={"username": username, "password": password},
-            headers={"Content-Type": "application/x-www-form-urlencoded"}
-        )
-        response.raise_for_status()
-        token_data = response.json()
-        return token_data["access_token"]
-    except requests.exceptions.RequestException as e:
-        st.error(f"Login failed: {e}")
-        return None
-
-# Function to get schedule by ID using authentication token
-def get_schedule(schedule_id, token):
-    headers = {"Authorization": f"Bearer {token}"}
-    try:
-        response = requests.get(f"{API_URL}/schedule/{schedule_id}", headers=headers)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        st.error(f"Failed to fetch schedule: {e}")
-        return None
-
-# Function to create a new schedule using authentication token
-def create_schedule(tasks, constraints, working_days, start_hour_day, end_hour_day, breaks, token):
+def register_user(username, email, password):
+    st.write("Attempting to register at:", f"{API_URL}/register")
     payload = {
-        "tasks": tasks,
-        "constraints": constraints,
-        "working_days": working_days,
-        "start_hour_day": start_hour_day,
-        "end_hour_day": end_hour_day,
-        "Breaks": breaks
+        "username": username,
+        "email": email,
+        "password": password
     }
-    headers = {"Authorization": f"Bearer {token}"}
     try:
-        response = requests.post(f"{API_URL}/schedule", json=payload, headers=headers)
+        response = requests.post(
+            f"{API_URL}/register",
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        )
+        st.write("Registration response status:", response.status_code)
         response.raise_for_status()
-        return response.json()
+        user_data = response.json()
+        st.write("Registration successful for user:", user_data)
+        return user_data
     except requests.exceptions.RequestException as e:
-        st.error(f"Failed to create schedule: {e}")
+        st.error(f"Registration failed: {e}")
+        st.write("Full error details:", e.__dict__)
         return None
 
 # -------------------------------
-# Login Page (if user is not logged in)
+# Authentication UI: Only show if token is not set
 # -------------------------------
 if not st.session_state["token"]:
-    st.title("Login")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        token = login_user(username, password)
-        if token:
-            st.session_state["token"] = token
-            st.success("Logged in successfully!")
-            st.rerun()  # Use st.rerun() instead of st.experimental_rerun()
-        else:
-            st.error("Invalid credentials. Please try again.")
-    st.stop()  # Stop execution until the user logs in
+    auth_mode = st.sidebar.radio("Select Option", ["Login", "Register"])
+    
+    if auth_mode == "Login":
+        st.title("Login")
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
+        if st.button("Login"):
+            token = login_user(username, password)
+            if token:
+                st.session_state["token"] = token
+                st.success("Logged in successfully!")
+                safe_rerun()  # Use safe rerun to refresh the app
+            else:
+                st.error("Invalid credentials. Please try again.")
+    
+    elif auth_mode == "Register":
+        st.title("Register")
+        reg_username = st.text_input("Username", key="reg_username")
+        reg_email = st.text_input("Email", key="reg_email")
+        reg_password = st.text_input("Password", type="password", key="reg_password")
+        reg_password_confirm = st.text_input("Confirm Password", type="password", key="reg_password_confirm")
+        if st.button("Register"):
+            if reg_password != reg_password_confirm:
+                st.error("Passwords do not match.")
+            else:
+                result = register_user(reg_username, reg_email, reg_password)
+                if result:
+                    st.success("Registration successful! Please log in.")
+                    safe_rerun()  # Refresh to show login UI
+    # Stop execution if the token is still not set
+    if not st.session_state["token"]:
+        st.stop()
+
 # -------------------------------
 # Main App: Task Scheduler
 # -------------------------------
@@ -124,7 +131,6 @@ if add_task:
     else:
         st.sidebar.error("Please fill in all required fields.")
 
-# Display added tasks
 st.subheader("Tasks to Schedule")
 if st.session_state["tasks"]:
     for i, task in enumerate(st.session_state["tasks"]):
@@ -144,6 +150,24 @@ working_days = st.sidebar.multiselect(
 constraints = st.sidebar.text_area("Constraints (JSON format)", value="{}")
 breaks = st.sidebar.text_area("Breaks (JSON format)", value="[]")
 schedule_button = st.sidebar.button("Create Schedule")
+
+def create_schedule(tasks, constraints, working_days, start_hour_day, end_hour_day, breaks, token):
+    payload = {
+        "tasks": tasks,
+        "constraints": constraints,
+        "working_days": working_days,
+        "start_hour_day": start_hour_day,
+        "end_hour_day": end_hour_day,
+        "Breaks": breaks
+    }
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        response = requests.post(f"{API_URL}/schedule", json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to create schedule: {e}")
+        return None
 
 if schedule_button:
     try:
@@ -168,6 +192,16 @@ if schedule_button:
 st.header("Schedule")
 schedule_id = st.text_input("Enter Schedule ID to fetch")
 fetch_button = st.button("Fetch Schedule")
+
+def get_schedule(schedule_id, token):
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        response = requests.get(f"{API_URL}/schedule/{schedule_id}", headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to fetch schedule: {e}")
+        return None
 
 if fetch_button and schedule_id:
     schedule = get_schedule(schedule_id, st.session_state["token"])

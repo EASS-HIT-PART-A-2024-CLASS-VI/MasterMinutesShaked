@@ -1,12 +1,22 @@
 import streamlit as st
+# Inject custom CSS for background color
+page_bg_style = """
+<style>
+.stApp {
+    background-color: #7F7F7F;  /* Replace with your desired hex color */
+}
+</style>
+"""
+st.markdown(page_bg_style, unsafe_allow_html=True)
+
+# Optionally display your icon at the top
+st.image("iconback.png", width=400)
 import requests
 import json
 import os
 
 # Base URL of the FastAPI backend
 API_URL = "http://fastapi:1236"
-st.write("API URL:", API_URL)
-
 # Initialize session state variables
 if "token" not in st.session_state:
     st.session_state["token"] = None

@@ -9,9 +9,9 @@ services:
     ports:
       - "1236:1236"  # Expose FastAPI on host
     environment:
-      - GOOGLE_API_KEY=1
-      - DATABASE_URL=1
-      - REDIS_URL=1
+      - GOOGLE_API_KEY=AIzaSyDRx8ZlGcjZxrrNiFJf-GgR60-4EX8Olvc
+      - DATABASE_URL=postgresql://postgres:password@db:5432/tasks_db
+      - REDIS_URL=redis://redis:6379/0
     networks:
       - app_network
     depends_on:
@@ -31,6 +31,7 @@ services:
       - app_network
     volumes:
       - .:/app
+      - /home/shaked/llmtry3/iconback.png
     depends_on:
       - fastapi
 

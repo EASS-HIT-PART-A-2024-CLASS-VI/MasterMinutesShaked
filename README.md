@@ -4,9 +4,12 @@
 A **FastAPI**-based project that leverages a **Large Language Model (LLM)** to intelligently schedule tasks based on user-defined constraints. This project automates and optimizes the scheduling process, making it more efficient and adaptable.
 
 ---
+## 📊 Project Diagram
+
+![Project Diagram](./diagram.png)
 
 ## 📁 Project Structure
-
+ 
 ```
 .
 ├── __pycache__/                # Compiled Python files

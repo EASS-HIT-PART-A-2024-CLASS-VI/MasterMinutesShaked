@@ -85,13 +85,20 @@ A **FastAPI**-based project that leverages a **Large Language Model (LLM)** to i
 
 ---
 
+
 ## ⚙️ API Endpoints Overview
 
-| **Method** | **Endpoint**                          | **Description**                                                                                 |
-|------------|--------------------------------------|---------------------------------------------------------------------------------------------|
-| **POST**   | `/schedule`                          | Generates a task schedule using an LLM or fallback local scheduler.                         |
-| **GET**    | `/schedule/{schedule_id}`            | Retrieves a schedule by its unique ID.                                                     |
-| **PUT**    | `/schedule/{schedule_id}/task/{task_id}` | Updates a specific task within a schedule.                                                 |
+| **Method** | **Endpoint**                                   | **Description**                                                                 |
+|------------|-----------------------------------------------|---------------------------------------------------------------------------------|
+| **POST**   | `/schedule`                                   | Generates a task schedule using Gemini or a fallback local scheduler.          |
+| **GET**    | `/schedule/{schedule_id}`                     | Retrieves a schedule by its unique ID.                                         |
+| **PUT**    | `/schedule/{schedule_id}/task/{task_id}`      | Updates a specific task within a schedule.                                     |
+| **POST**   | `/gemini/query`                               | Queries the Gemini LLM to generate a JSON schedule.                            |
+| **POST**   | `/register`                                   | Registers a new user account.                                                  |
+| **POST**   | `/token`                                      | Authenticates a user and returns an access token.                              |
+| **GET**    | `/users/me`                                   | Retrieves the currently authenticated user's information.                       |
+| **GET**    | `/get_schedule/{schedule_id}`                 | Fetches the schedule and sends it to the user's Telegram chat.                 |
+
 
 ---
 

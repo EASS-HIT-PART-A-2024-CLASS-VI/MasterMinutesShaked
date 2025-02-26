@@ -10,65 +10,55 @@ MasterMinutes is an AI-powered Pomodoro-based task scheduling application that h
  
 ```
 .
-├── __pycache__/                # Compiled Python files
-├── .dockerignore               # Docker ignore file
-├── .env                        # Environment variables file
-├── .envExample                 # Example environment variables file
-├── .gitignore                  # Git ignore file
-├── .pytest_cache/              # Pytest cache directory
-├── .vscode/                    # VSCode configuration directory
-├── backend/                    # Backend directory
-│   ├── __init__.py             # Backend package initializer
-│   ├── auth/                   # Authentication module
+.
+├── backend/
+│   ├── __init__.py
+│   ├── auth/
 │   │   ├── __init__.py
-│   │   └── auth.py             # Authentication logic
-│   ├── core/                   # Core application logic
+│   │   └── auth.py
+│   ├── core/
 │   │   ├── __init__.py
-│   │   └── main.py             # Core FastAPI application file
-│   ├── db/                     # Database configuration and models
+│   │   └── main.py
+│   ├── db/
 │   │   ├── __init__.py
-│   │   ├── database.py         # Database configuration
-│   │   └── models.py           # SQLAlchemy models and Pydantic schemas
-│   ├── services/               # Services and business logic
+│   │   ├── database.py
+│   │   └── models.py
+│   ├── services/
 │   │   ├── __init__.py
-│   │   └── telegram_service.py # Telegram service for sending notifications
-│   ├── tests/                  # Test cases
-│   │   ├── __init__.py
-│   │   └── test_llm.py         # Pytest suite for API tests
-│   └── utils/                  # Utility functions
-│       ├── __init__.py
-│       └── utils.py            # Utility functions
-├── docker-compose.yml          # Docker Compose configuration file
-├── Dockerfile-fastapi          # Dockerfile for FastAPI backend
-├── Dockerfile-telegram         # Dockerfile for Telegram service
-├── frontend/                   # Frontend directory
-│   ├── react-frontend/         # React frontend application directory
-│   │   ├── public/             # Public directory for static files
-│   │   ├── src/                # Source directory
-│   │   │   ├── components/     # React components
+│   │   └── telegram_service.py
+│   ├── tests/
+│      ├── __init__.py
+│      └── test_llm.py
+├── docker-compose.yml
+├── Dockerfile-fastapi
+├── Dockerfile-telegram
+├── frontend/
+│   ├── react-frontend/
+│   │   ├── public/
+│   │   ├── src/
+│   │   │   ├── components/
 │   │   │   │   ├── Dashboard.js
 │   │   │   │   ├── TaskForm.js
 │   │   │   │   ├── TaskList.js
 │   │   │   │   ├── ScheduleForm.js
-│   │   │   │   ├── ScheduleViewer.js
-│   │   │   │   └── fornted.js  # The provided file
-│   │   │   ├── services/       # API services
+│   │   │   │   └── ScheduleViewer.js
+│   │   │   ├── services/
 │   │   │   │   ├── api.js
 │   │   │   │   └── telegramApi.js
-│   │   │   ├── App.js          # Main React component
-│   │   │   └── index.js        # Entry point for React application
-│   │   ├── .gitignore          # Git ignore file for React frontend
-│   │   ├── package.json        # NPM package configuration file
-│   │   └── README.md           # README file for React frontend
-│   ├── streamlit_app.py        # Streamlit application file
-│   └── streamlit_requirements.txt # Streamlit dependencies
-├── icon.png                    # Icon image file
-├── iconback.png                # Background icon image file
-├── README.md                   # Project documentation
-├── req.txt                     # Additional requirements file
-├── requirements.txt            # Python dependencies
-├── run_tests.sh                # Shell script to execute tests
-└── test.db                     # SQLite database file for testing
+│   │   │   ├── App.js
+│   │   │   └── index.js
+│   │   ├── .gitignore
+│   │   ├── package.json
+│   │   └── README.md
+│   ├── streamlit_app.py
+│   └── streamlit_requirements.txt
+├── .env
+├── .envExample
+├── .gitignore
+├── README.md
+├── requirements.txt
+├── run_tests.sh
+└── test.db
 ```
 
 - **`main.py`**: Defines API endpoints and contains scheduling logic.
@@ -77,7 +67,6 @@ MasterMinutes is an AI-powered Pomodoro-based task scheduling application that h
 - **`run_tests.sh`**: A shell script to automate testing.
 - **`requirements.txt`**: Lists all required Python dependencies for the project.
 - **`Dockerfile-fastapi`**: Contains instructions to containerize the FastAPI backend.
-- **`Dockerfile-streamlit`**: Contains instructions to containerize the Streamlit frontend.
 - **`Dockerfile-telegram`**: Contains instructions to containerize the Telegram service.
 - **`README.md`**: Comprehensive guide to the project.
 

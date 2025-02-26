@@ -1,8 +1,6 @@
 
-# 📅 MasterMinutes: A LLM-Powered Task Scheduler API
-
-A **FastAPI**-based project that leverages a **Large Language Model (LLM)** to intelligently schedule tasks based on user-defined constraints. This project automates and optimizes the scheduling process, making it more efficient and adaptable.
-
+# 📅MasterMinutes: A LLM-Powered Task Scheduler Application
+MasterMinutes is an AI-powered Pomodoro-based task scheduling application that helps you stay focused and productive. Leveraging advanced LLM capabilities, it intelligently organizes your tasks, optimizes work sessions, and provides smart recommendations to enhance time management. Whether you're tackling deep work, managing multiple projects, or simply aiming to boost efficiency, MasterMinutes ensures you make the most of every minute.
 ---
 ## 📊 Project Diagram
 

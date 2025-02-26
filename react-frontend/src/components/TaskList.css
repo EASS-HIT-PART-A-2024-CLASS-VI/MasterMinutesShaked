@@ -12,7 +12,7 @@
   gap: 10px; /* spacing between items */
 }
 
-.task-item {
+.my-task-item {
   background-color: #f9f9f9;
   border: 1px solid #ddd;
   border-radius: 5px;
@@ -20,15 +20,15 @@
   box-sizing: border-box;
 }
 
-.task-item.priority-high {
+.my-task-item.priority-high {
   border-left: 5px solid red;
 }
 
-.task-item.priority-medium {
+.my-task-item.priority-medium {
   border-left: 5px solid orange;
 }
 
-.task-item.priority-low {
+.my-task-item.priority-low {
   border-left: 5px solid green;
 }
 

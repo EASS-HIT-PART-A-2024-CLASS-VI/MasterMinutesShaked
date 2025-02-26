@@ -8,40 +8,66 @@ A **FastAPI**-based project that leverages a **Large Language Model (LLM)** to i
 ## 📁 Project Structure
 
 ```
+.
 ├── __pycache__/                # Compiled Python files
 ├── .dockerignore               # Docker ignore file
 ├── .env                        # Environment variables file
 ├── .envExample                 # Example environment variables file
 ├── .gitignore                  # Git ignore file
 ├── .pytest_cache/              # Pytest cache directory
-├── .streamlit/                 # Streamlit configuration directory
 ├── .vscode/                    # VSCode configuration directory
-├── auth.py                     # Authentication module
 ├── backend/                    # Backend directory
-├── database.py                 # Database configuration
+│   ├── __init__.py             # Backend package initializer
+│   ├── auth/                   # Authentication module
+│   │   ├── __init__.py
+│   │   └── auth.py             # Authentication logic
+│   ├── core/                   # Core application logic
+│   │   ├── __init__.py
+│   │   └── main.py             # Core FastAPI application file
+│   ├── db/                     # Database configuration and models
+│   │   ├── __init__.py
+│   │   ├── database.py         # Database configuration
+│   │   └── models.py           # SQLAlchemy models and Pydantic schemas
+│   ├── services/               # Services and business logic
+│   │   ├── __init__.py
+│   │   └── telegram_service.py # Telegram service for sending notifications
+│   ├── tests/                  # Test cases
+│   │   ├── __init__.py
+│   │   └── test_llm.py         # Pytest suite for API tests
+│   └── utils/                  # Utility functions
+│       ├── __init__.py
+│       └── utils.py            # Utility functions
 ├── docker-compose.yml          # Docker Compose configuration file
 ├── Dockerfile-fastapi          # Dockerfile for FastAPI backend
-├── Dockerfile-streamlit        # Dockerfile for Streamlit frontend
 ├── Dockerfile-telegram         # Dockerfile for Telegram service
-├── fastapi-frontend/           # FastAPI frontend directory
-├── fornted.js                  # Frontend JavaScript file
+├── frontend/                   # Frontend directory
+│   ├── react-frontend/         # React frontend application directory
+│   │   ├── public/             # Public directory for static files
+│   │   ├── src/                # Source directory
+│   │   │   ├── components/     # React components
+│   │   │   │   ├── Dashboard.js
+│   │   │   │   ├── TaskForm.js
+│   │   │   │   ├── TaskList.js
+│   │   │   │   ├── ScheduleForm.js
+│   │   │   │   ├── ScheduleViewer.js
+│   │   │   │   └── fornted.js  # The provided file
+│   │   │   ├── services/       # API services
+│   │   │   │   ├── api.js
+│   │   │   │   └── telegramApi.js
+│   │   │   ├── App.js          # Main React component
+│   │   │   └── index.js        # Entry point for React application
+│   │   ├── .gitignore          # Git ignore file for React frontend
+│   │   ├── package.json        # NPM package configuration file
+│   │   └── README.md           # README file for React frontend
+│   ├── streamlit_app.py        # Streamlit application file
+│   └── streamlit_requirements.txt # Streamlit dependencies
 ├── icon.png                    # Icon image file
 ├── iconback.png                # Background icon image file
-├── main.py                     # Core FastAPI application file
-├── MasterMinutes.zip           # Project archive
-├── moudles.py                  # SQLAlchemy models and Pydantic schemas
-├── public/                     # Public directory for static files
-├── react-frontend/             # React frontend application directory
 ├── README.md                   # Project documentation
 ├── req.txt                     # Additional requirements file
 ├── requirements.txt            # Python dependencies
 ├── run_tests.sh                # Shell script to execute tests
-├── src/                        # Source directory
-├── streamlit_app.py            # Streamlit application file
-├── streamlit_requirements.txt  # Streamlit dependencies
-├── telegram_service.py         # Telegram service for sending notifications
-├── test_llm.py                 # Pytest suite for API tests
-├── test.db                     # SQLite database file for testing
+└── test.db                     # SQLite database file for testing
 ```
 
 - **`main.py`**: Defines API endpoints and contains scheduling logic.

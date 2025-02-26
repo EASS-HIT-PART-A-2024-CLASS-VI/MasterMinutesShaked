@@ -16,7 +16,7 @@ const TaskList = ({ tasks, onRemoveTask }) => {
       <h2>Tasks to Schedule</h2>
       <div className="task-list-items">
         {tasks.map((task, index) => (
-          <div key={index} className={`task-item priority-${task.priority.toLowerCase()}`}>
+          <div key={index} className={`my-task-item priority-${task.priority.toLowerCase()}`}>
             <div className="task-header">
               <h3>{task.name}</h3>
               <button

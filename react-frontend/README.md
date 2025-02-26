@@ -1,3 +1,4 @@
+
 # 📅 MasterMinutes: A LLM-Powered Task Scheduler API
 
 A **FastAPI**-based project that leverages a **Large Language Model (LLM)** to intelligently schedule tasks based on user-defined constraints. This project automates and optimizes the scheduling process, making it more efficient and adaptable.
@@ -7,21 +8,50 @@ A **FastAPI**-based project that leverages a **Large Language Model (LLM)** to i
 ## 📁 Project Structure
 
 ```
-├── main.py         # Core FastAPI application file
-├── modules.py      # Pydantic models for data validation
-├── test_llm.py     # Pytest suite for API tests
-├── run_tests.sh    # Shell script to execute tests
-├── requirements.txt # Python dependencies
-├── Dockerfile      # Docker configuration file
-└── README.md       # Project documentation
+├── __pycache__/                # Compiled Python files
+├── .dockerignore               # Docker ignore file
+├── .env                        # Environment variables file
+├── .envExample                 # Example environment variables file
+├── .gitignore                  # Git ignore file
+├── .pytest_cache/              # Pytest cache directory
+├── .streamlit/                 # Streamlit configuration directory
+├── .vscode/                    # VSCode configuration directory
+├── auth.py                     # Authentication module
+├── backend/                    # Backend directory
+├── database.py                 # Database configuration
+├── docker-compose.yml          # Docker Compose configuration file
+├── Dockerfile-fastapi          # Dockerfile for FastAPI backend
+├── Dockerfile-streamlit        # Dockerfile for Streamlit frontend
+├── Dockerfile-telegram         # Dockerfile for Telegram service
+├── fastapi-frontend/           # FastAPI frontend directory
+├── fornted.js                  # Frontend JavaScript file
+├── icon.png                    # Icon image file
+├── iconback.png                # Background icon image file
+├── main.py                     # Core FastAPI application file
+├── MasterMinutes.zip           # Project archive
+├── moudles.py                  # SQLAlchemy models and Pydantic schemas
+├── public/                     # Public directory for static files
+├── react-frontend/             # React frontend application directory
+├── README.md                   # Project documentation
+├── req.txt                     # Additional requirements file
+├── requirements.txt            # Python dependencies
+├── run_tests.sh                # Shell script to execute tests
+├── src/                        # Source directory
+├── streamlit_app.py            # Streamlit application file
+├── streamlit_requirements.txt  # Streamlit dependencies
+├── telegram_service.py         # Telegram service for sending notifications
+├── test_llm.py                 # Pytest suite for API tests
+├── test.db                     # SQLite database file for testing
 ```
 
 - **`main.py`**: Defines API endpoints and contains scheduling logic.
-- **`modules.py`**: Houses Pydantic models for request and response validation.
+- **`moudles.py`**: Houses SQLAlchemy models and Pydantic schemas for request and response validation.
 - **`test_llm.py`**: Contains automated test cases for API functionality.
 - **`run_tests.sh`**: A shell script to automate testing.
 - **`requirements.txt`**: Lists all required Python dependencies for the project.
-- **`Dockerfile`**: Contains instructions to containerize the application using Docker.
+- **`Dockerfile-fastapi`**: Contains instructions to containerize the FastAPI backend.
+- **`Dockerfile-streamlit`**: Contains instructions to containerize the Streamlit frontend.
+- **`Dockerfile-telegram`**: Contains instructions to containerize the Telegram service.
 - **`README.md`**: Comprehensive guide to the project.
 
 ---
@@ -159,6 +189,9 @@ Same as the **`POST /schedule`** response.
 4. **Set environment variables:**
    ```bash
    export GOOGLE_API_KEY="your_gemini_api_key"
+   export REDIS_URL="redis://redis:6379/0"
+   export TELEGRAM_TOKEN="your_telegram_bot_token"
+   export TELEGRAM_CHAT_ID="your_telegram_chat_id"
    ```
 
 5. **Run the application:**
@@ -209,4 +242,8 @@ This script:
 
 ## 📜 License
 
-This project is licensed under the [Your License] License. See **LICENSE.md** for details. 
+This project is licensed under the [Your License] License. See **LICENSE.md** for details.
+```
+
+This `README.md` file provides an overview of the project, its features, prerequisites, setup instructions, project structure, and usage. Adjust the content as needed to fit your specific project details.
+This `README.md` file provides an overview of the project, its features, prerequisites, setup instructions, project structure, and usage. Adjust the content as needed to fit your specific project details.

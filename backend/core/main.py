@@ -14,10 +14,10 @@ import uvicorn
 import redis
 from telegram import Bot
 from fastapi.security import OAuth2PasswordRequestForm
-from auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user
+from backend.auth.auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user
 
-from moudles import InputSchema, OutputSchema, ScheduleItem, Task, Schedule, SessionLocal
-import moudles as models
+from backend.db.moudles import InputSchema, OutputSchema, ScheduleItem, Task, Schedule, SessionLocal
+import backend.db.moudles as models
 
 app = FastAPI()
 
@@ -338,9 +338,9 @@ For a task with `X` total minutes:
 #     )
 #     return {"access_token": access_token, "token_type": "bearer"}
 
-from moudles import UserCreate, UserOut, Token
-from moudles import User
-from auth import (
+from backend.db.moudles import UserCreate, UserOut, Token
+from backend.db.moudles import User
+from backend.auth.auth import (
     get_password_hash,
     verify_password,
     create_access_token,

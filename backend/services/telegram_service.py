@@ -8,9 +8,9 @@ import asyncio
 from dotenv import load_dotenv
 import uvicorn
 from telegram import Bot
-from moudles import Task, SessionLocal  # Make sure your moudles module exposes these
-from auth import get_current_active_user  # Import your current active user dependency
-import moudles as models
+from backend.db.moudles import Task, SessionLocal  # Make sure your moudles module exposes these
+from backend.auth.auth import get_current_active_user  # Import your current active user dependency
+import backend.db.moudles as models
 
 # Load environment variables from .env file
 load_dotenv()

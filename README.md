@@ -232,16 +232,16 @@ Same as the **`POST /schedule`** response.
 
 ---
 
-## 🐳 Running with Docker
+## 🐳 Running with Docker-compose
 
-1. **Build the Docker image:**
+1. **Build the Docker images:**
    ```bash
-   docker build -t masterminutes-api .
+   docker-compose build  
    ```
 
-2. **Run the container:**
+2. **Run the containers:**
    ```bash
-   docker run -p 1236:1236 masterminutes-api
+   docker-compose up
    ```
 
 3. **Access the API Docs:**

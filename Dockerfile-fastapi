@@ -1,20 +1,20 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim-buster AS fastapi-builder
+# Use the official Python image from the Docker Hub
+FROM python:3.11
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
 # Copy the requirements file first
 COPY requirements.txt .
 
-# Install dependencies
-RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt && pip install sqlalchemy psycopg2-binary redis python-telegram-bot
+# Install the dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the project files
-COPY . .
+# Copy the rest of the application code into the container
+COPY backend/ ./backend
 
 # Expose the port for FastAPI
 EXPOSE 1236
 
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "1236"]
+# Command to run the FastAPI application
+CMD ["uvicorn", "backend.core.main:app", "--host", "0.0.0.0", "--port", "1236"]

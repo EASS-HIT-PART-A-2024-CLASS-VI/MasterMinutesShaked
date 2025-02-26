@@ -1,20 +1,17 @@
-  # Use an official Python runtime as a parent image
-  FROM python:3.11-slim-buster
+  # Use the official Python image from the Docker Hub
+  FROM python:3.11
   
-  # Set the working directory in the container
+  # Set the working directory
   WORKDIR /app
   
   # Copy the requirements file first
   COPY requirements.txt .
   
-  # Install dependencies
-  RUN pip install --default-timeout=100 --no-cache-dir -r requirements.txt && pip install sqlalchemy psycopg2-binary redis python-telegram-bot
+  # Install the dependencies
+  RUN pip install --no-cache-dir -r requirements.txt
   
-  # Copy the rest of the project files
-  COPY . .
-  
-  # Expose the port for the Telegram service
-  EXPOSE 8001
+  # Copy the rest of the application code into the container
+  COPY backend/ ./backend
   
   # Command to run the Telegram service
-  CMD ["uvicorn", "telegram_service:app", "--host", "0.0.0.0", "--port", "8001"]
+  CMD ["uvicorn", "backend.services.telegram_service:app", "--host", "0.0.0.0", "--port", "8001"]

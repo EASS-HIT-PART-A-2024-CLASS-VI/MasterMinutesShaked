@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://fastapi:1236',
-  timeout: 10000,
+  timeout: 10000000,
 });
 
 // Add a response interceptor for handling token expiration

@@ -6,7 +6,8 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import axios from "axios";
 import "tailwindcss/tailwind.css";
-
+import React, { useState } from 'react';
+import axios from 'axios';
 const API_URL = "http://fastapi:1236";
 
 const Login = ({ setToken }) => {
@@ -51,12 +52,14 @@ const Login = ({ setToken }) => {
   );
 };
 
+
 const Dashboard = ({ token }) => {
   const [tasks, setTasks] = useState([]);
   const [taskName, setTaskName] = useState("");
   const [duration, setDuration] = useState(30);
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [scheduleId, setScheduleId] = useState(""); // Add state for schedule ID
 
   const addTask = () => {
     if (!taskName || !date || !startTime) {
@@ -71,6 +74,20 @@ const Dashboard = ({ token }) => {
       end: endDateTime,
     };
     setTasks([...tasks, newTask]);
+  };
+
+  const sendScheduleToTelegram = async () => {
+    try {
+      const response = await axios.get(`http://localhost:8001/send_schedule/${scheduleId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      alert(response.data.message);
+    } catch (error) {
+      console.error("Error sending schedule to Telegram:", error);
+      alert("Failed to send schedule to Telegram.");
+    }
   };
 
   return (
@@ -107,6 +124,21 @@ const Dashboard = ({ token }) => {
           Add Task
         </button>
       </div>
+      <div className="bg-white p-4 rounded-lg shadow-md w-full mb-6">
+        <h2 className="text-xl font-semibold">Send Schedule to Telegram</h2>
+        <input
+          type="text"
+          placeholder="Schedule ID"
+          className="w-full p-2 border rounded mt-2"
+          onChange={(e) => setScheduleId(e.target.value)}
+        />
+        <button
+          onClick={sendScheduleToTelegram}
+          className="w-full bg-blue-500 text-white p-2 rounded mt-4 hover:bg-blue-600"
+        >
+          Send Schedule
+        </button>
+      </div>
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
@@ -116,6 +148,7 @@ const Dashboard = ({ token }) => {
     </div>
   );
 };
+
 
 const App = () => {
   const [token, setToken] = useState(null);

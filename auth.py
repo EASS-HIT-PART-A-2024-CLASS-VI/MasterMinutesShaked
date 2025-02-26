@@ -107,6 +107,7 @@ from moudles import TokenData
 
 from dotenv import load_dotenv
 load_dotenv()
+
 # Read secret settings from environment variables (or provide defaults)
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
 ALGORITHM = "HS256"

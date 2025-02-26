@@ -1,0 +1,48 @@
+.task-form {
+    background-color: var(--card-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--box-shadow);
+  }
+  
+  .task-form h2 {
+    margin-bottom: 20px;
+    color: var(--primary-dark);
+  }
+  
+  .add-task-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 15px;
+  }
+  
+  .add-task-btn:hover {
+    background-color: var(--primary-dark);
+  }
+  
+  .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    background-color: white;
+  }
+  
+  .form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    resize: vertical;
+  }
+  

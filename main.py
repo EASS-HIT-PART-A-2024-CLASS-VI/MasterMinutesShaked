@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import datetime, date, timedelta
 from typing import List, Optional, Dict, Any
@@ -15,9 +16,26 @@ from telegram import Bot
 from fastapi.security import OAuth2PasswordRequestForm
 from auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user
 
-from moudles import InputSchema, OutputSchema, ScheduleItem, Task, SessionLocal
+from moudles import InputSchema, OutputSchema, ScheduleItem, Task, Schedule, SessionLocal
+import moudles as models
 
 app = FastAPI()
+
+origins = ["*"]
+
+# origins = [
+#     "localhost",
+#     "react-frontend_1",
+#     "react-frontend"
+# ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Allow specific origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -62,22 +80,13 @@ def get_cached_data(key: str) -> Optional[dict]:
     return None
 
 # Helper function to send schedule to Telegram
-def send_schedule_to_telegram(schedule: dict):
-    message = "Here is your schedule:\n\n"
-    for task in schedule["schedule"]:
-        message += f"Task: {task['task_name']}\n"
-        message += f"Start Time: {task['start_time']}\n"
-        message += f"End Time: {task['end_time']}\n"
-        message += f"Priority: {task['priority']}\n"
-        message += f"Date: {task['date']}\n"
-        message += f"Notes: {task.get('notes', 'None')}\n\n"
-    Bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+
 
 # POST endpoint to generate a schedule with Gemini handling task scheduling
 @app.post("/schedule", response_model=OutputSchema)
 async def generate_schedule(input_data: InputSchema,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)):
+    current_user: models.User = Depends(get_current_active_user)):
    
     try:
         # Update the prompt to explicitly request JSON format
@@ -88,7 +97,7 @@ async def generate_schedule(input_data: InputSchema,
             "model": MODEL_NAME,
             "temperature": 0.1
         }
-        print(gemini_input)
+        # print(gemini_input)
 
         # Call Gemini API to generate the schedule
         gemini_response = await query_gemini_model(request=gemini_input)
@@ -105,6 +114,8 @@ async def generate_schedule(input_data: InputSchema,
             try:
                 # Try to parse the cleaned response as JSON
                 schedule_data = json.loads(cleaned_response_text)
+                # for task in schedule_data:
+                    # task['user_id'] = current_user.id
                 schedule_data = {"schedule": schedule_data}
                 print("Parsed Gemini Schedule:", schedule_data)
             except json.JSONDecodeError:
@@ -116,22 +127,30 @@ async def generate_schedule(input_data: InputSchema,
 
             # Save the generated schedule to the database
             schedule_id = str(uuid.uuid4())
-            print(schedule_data)
+            db_scheudle = Schedule(
+                id = schedule_id,
+                user_id = current_user.id
+            )
+            db.add(db_scheudle)
+
+            # TODO: try remove db here
+            db.commit()
             for task in schedule_data["schedule"]:
                 db_task = Task(
-                    id=str(uuid.uuid4()),  # Generate a unique UUID for each task
-                    name=task["task_name"],
-                    start_time = task["start_time"],
-                    end_time = task["end_time"],
-                    # duration_minutes=task["duration_minutes"],
-                    priority=task["priority"],
-                    notes=task.get("notes"),
-                    date=datetime.strptime(task["date"], "%Y-%m-%d").date()
+                id=str(uuid.uuid4()), 
+                schedule_id = schedule_id,
+                name=task["task_name"],
+                start_time=task["start_time"],
+                end_time=task["end_time"],
+                priority=task["priority"],
+                notes=task.get("notes"),
+                date=datetime.strptime(task["date"], "%Y-%m-%d").date(),
+                # user_id=task["user_id"]
                 )
                 db.add(db_task)
             db.commit()
             cache_data(schedule_id, schedule_data)
-            send_schedule_to_telegram(schedule_data)
+         #   send_schedule_to_telegram(schedule_data)
 
             return OutputSchema(schedule_id=schedule_id, schedule=schedule_data["schedule"], notes=schedule_data.get("notes", ""))
 
@@ -145,7 +164,12 @@ async def generate_schedule(input_data: InputSchema,
 @app.put("/schedule/{schedule_id}/task/{task_id}")
 async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem, db: Session = Depends(get_db),
                       current_user=Depends(get_current_active_user)):
-    task = db.query(Task).filter(Task.id == task_id).first()
+    # task = db.query(Task).filter(Task.id == task_id).first()
+    task = db.query(Task).filter(
+        Task.id == task_id,
+        Task.schedule_id == schedule_id,
+  
+    ).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -165,22 +189,26 @@ async def get_schedule(schedule_id: str, db: Session = Depends(get_db), current_
     if cached_schedule:
         return OutputSchema(schedule_id=schedule_id, schedule=cached_schedule["schedule"], notes=cached_schedule.get("notes"))
 
-    tasks = db.query(Task).filter(Task.schedule_id == schedule_id).all()
+    # tasks = db.query(Task).filter(Task.schedule_id == schedule_id).all()
+    tasks = db.query(Task).filter(
+        Task.schedule_id == schedule_id,
+    ).all()
     if not tasks:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
     schedule = [ScheduleItem(
         task_id=task.id,
+        # user_id = task.user_id,
         task_name=task.name,
-        start_time=task.start_time.strftime("%H:%M"),
-        end_time=task.end_time.strftime("%H:%M"),
+        start_time=task.start_time,
+        end_time=task.end_time,
         priority=task.priority,
         day=task.date.strftime("%A"),
         date=task.date.strftime("%Y-%m-%d"),
         notes=task.notes
     ) for task in tasks]
 
-    cache_data(schedule_id, {"schedule": schedule})
+    cache_data(schedule_id,  {"schedule": [item.model_dump() for item in schedule]})
 
     return OutputSchema(schedule_id=schedule_id, schedule=schedule, notes=None)
 
@@ -294,59 +322,9 @@ For a task with `X` total minutes:
 
     raise HTTPException(status_code=500, detail="Failed to query Gemini API after multiple retries")
 
-@app.on_event("startup")
-async def start_notification_service():
-    # This creates a background asyncio task that will run alongside your FastAPI endpoints.
-    asyncio.create_task(notification_loop())
 
-async def notification_loop():
-    """Periodically check for tasks starting in 10 minutes and send notifications."""
-    while True:
-        await check_and_send_notifications()
-        await asyncio.sleep(60)  # Wait 60 seconds before checking again
 
-async def check_and_send_notifications():
-    """Check the database for tasks that are scheduled to start in 10 minutes and send a Telegram reminder."""
-    session = SessionLocal()
-    try:
-        now = datetime.now()
-        # Calculate the target time (10 minutes from now)
-        # target_time = now + timedelta(minutes=10)
-        # We create a window [target_time, target_time + 1 minute) to catch tasks scheduled at that minute.
-        lower_bound = now + timedelta(minutes=10)
-        upper_bound = lower_bound + timedelta(minutes=1)
 
-        # Query all tasks (in a more advanced version, filter by date and notified status)
-        tasks = session.query(Task).all()
-        if not tasks:
-            print("no tasks found")
-            return  # No tasks found
-
-        # Initialize the Telegram Bot
-        bot = Bot(token=TELEGRAM_TOKEN)
-
-        for task in tasks:
-            try:
-                # Combine the task's date and start_time string (assumed to be in "HH:MM" format)
-                task_time = datetime.combine(task.date, datetime.strptime(task.start_time, "%H:%M").time())
-                # Check if the task's scheduled datetime falls within our target window.
-                if lower_bound <= task_time < upper_bound:
-                    message = (
-                        f"Reminder: Your task '{task.name}' is scheduled to start at "
-                        f"{task.start_time} on {task.date.strftime('%Y-%m-%d')}."
-                    )
-                    print(message)
-                    print(TELEGRAM_CHAT_ID)
-                    await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-                    print(f"Sent notification for task {task.id}")
-                    # Optionally update the task (e.g., task.notified = True) to avoid sending duplicate notifications.
-            except Exception as e:
-                print(f"Error processing task {task.id}: {e}")
-        session.commit()
-    except Exception as e:
-        print(f"Error in notification service: {e}")
-    finally:
-        session.close()
 
 # @app.post("/token", response_model=Token)
 # async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -400,7 +378,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-import moudles as models
 @app.get("/users/me", response_model=UserOut)
 def read_users_me(current_user: models.User = Depends(get_current_active_user)):
     return current_user
@@ -412,37 +389,6 @@ async def send_long_message(bot, chat_id, message):
     for part in parts:
         await bot.send_message(chat_id=chat_id, text=part, parse_mode="Markdown")
 
-@app.get("/get_schedule")
-async def get_schedule_telegram(db: Session = Depends(get_db)):
-    """Fetch all scheduled tasks and send them to Telegram in chunks if needed."""
-    tasks = db.query(Task).all()
-
-    if not tasks:
-        return {"message": "No tasks found in the schedule"}
-
-    message = "📅 **Your Current Schedule:**\n\n"
-    for task in tasks:
-        task_info = (
-            f"📌 **Task:** {task.name}\n"
-            f"🕒 **Start:** {task.start_time}\n"
-            f"🕘 **End:** {task.end_time}\n"
-            f"🎯 **Priority:** {task.priority}\n"
-            f"📅 **Date:** {task.date}\n"
-            f"📝 **Notes:** {task.notes or 'None'}\n\n"
-        )
-        
-        # If adding this task makes message too long, send the existing message and reset
-        if len(message) + len(task_info) > 4000:
-            await send_long_message(Bot(token=TELEGRAM_TOKEN), TELEGRAM_CHAT_ID, message)
-            message = "📅 **Continued Schedule:**\n\n"  # Start a new message block
-
-        message += task_info
-
-    # Send the remaining message
-    if message:
-        await send_long_message(Bot(token=TELEGRAM_TOKEN), TELEGRAM_CHAT_ID, message)
-
-    return {"message": "Schedule sent to Telegram"}
 
 # Run the FastAPI application
 if __name__ == "__main__":

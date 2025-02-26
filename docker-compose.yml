@@ -9,31 +9,45 @@ services:
     ports:
       - "1236:1236"  # Expose FastAPI on host
     environment:
-      - GOOGLE_API_KEY=1
-      - DATABASE_URL=1
-      - REDIS_URL=1
+      - DATABASE_URL=postgresql://postgres:password@db:5432/tasks_db
+      - REDIS_URL=redis://redis:6379/0
     networks:
       - app_network
     depends_on:
       - db
       - redis
 
-  streamlit:
+  telegram_service:
     build:
       context: .
-      dockerfile: Dockerfile-streamlit
-    container_name: streamlit_app
+      dockerfile: Dockerfile-telegram
+    container_name: telegram_service
     ports:
-      - "8501:8501"
-    environment:
-      - FASTAPI_BASE_URL=http://fastapi:1236
+      - "8001:8001"  # Expose the telegram microservice on port 8001.
+
+     
     networks:
       - app_network
+    depends_on:
+      - db
+      - redis
+
+  react-frontend:
+    build: 
+      context: ./react-frontend
+      dockerfile: Dockerfile-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://fastapi:1236  # Use localhost for browser access
     volumes:
-      - .:/app
-      - /home/shaked/llmtry3/iconback.png
+      - ./src:/app/src
+      - ./public:/app/public
     depends_on:
       - fastapi
+      - telegram_service  # Add telegram_service as a dependency
+    networks:
+      - app_network
 
   db:
     image: postgres:15
@@ -54,7 +68,7 @@ services:
       - "6379:6379"
     networks:
       - app_network
-
+  
 networks:
   app_network:
     driver: bridge

@@ -1,0 +1,61 @@
+.schedule-form {
+    background-color: var(--card-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--box-shadow);
+  }
+  
+  .schedule-form h2 {
+    margin-bottom: 20px;
+    color: var(--primary-dark);
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .working-days-select {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 5px;
+  }
+  
+  .day-checkbox {
+    display: flex;
+    align-items: center;
+  }
+  
+  .day-checkbox input {
+    margin-right: 5px;
+  }
+  
+  .create-schedule-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 15px;
+  }
+  
+  .create-schedule-btn:hover {
+    background-color: var(--primary-dark);
+  }
+  
+  .json-error {
+    color: var(--error-color);
+    margin-top: 10px;
+    padding: 10px;
+    background-color: rgba(244, 67, 54, 0.1);
+    border-radius: var(--border-radius);
+  }
+  

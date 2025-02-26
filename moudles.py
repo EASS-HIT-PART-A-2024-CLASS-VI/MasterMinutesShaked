@@ -2,29 +2,18 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 import uuid
-from sqlalchemy import Column, String, Integer, Date, Boolean, DateTime, func, create_engine
+from sqlalchemy import Column, String, Integer, Date, Boolean, DateTime, func, create_engine, UUID, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 import asyncio
 from datetime import datetime, timedelta
-import uuid
+from dotenv import load_dotenv
+load_dotenv()
 
 Base = declarative_base()
 
-class Task(Base):
-    __tablename__ = "tasks"
 
-    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String, index=True)
-    start_time = Column(String)
-    end_time = Column(String)
-    priority = Column(String)
-    notes = Column(String, nullable=True)
-    date = Column(Date)
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)  # Foreign key to link task to user
-
-    user = relationship("User", back_populates="tasks")  # Relationship for user access
 class User(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
@@ -34,10 +23,27 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-from dotenv import load_dotenv
-load_dotenv()
+class Task(Base):
+    __tablename__ = 'tasks'
+    id = Column(String, primary_key=True, index=True)
+    schedule_id = Column(String, ForeignKey("schedule.id"))
+    # user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    name = Column(String, index=True)
+    start_time = Column(String)
+    end_time = Column(String)
+    # duration_minutes = Column(Integer)
+    priority = Column(String)
+    notes = Column(String, nullable=True)
+    date = Column(Date)
+
+class Schedule(Base):
+    __tablename__ = 'schedule'
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    # task_id = Column(String, ForeignKey("tasks.id"), nullable=False)
+
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
-print(DATABASE_URL)
+# print(DATABASE_URL)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -64,12 +70,13 @@ class InputSchema(BaseModel):
 
 class ScheduleItem(BaseModel):
     task_id: str
+    # user_id: str  # Link task to a specific user
     task_name: str
-    start_time: str
+    start_time: str  # Assuming "HH:MM" format
     end_time: str
-    priority: str
-    day: str
-    date: str
+    priority: str  # e.g., "High", "Medium", "Low"
+    day: str  # e.g., "Monday"
+    date: str  # "YYYY-MM-DD"
     notes: Optional[str] = None
 
 class OutputSchema(BaseModel):

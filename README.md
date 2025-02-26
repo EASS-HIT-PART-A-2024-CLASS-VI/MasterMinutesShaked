@@ -32,8 +32,7 @@ MasterMinutes is an AI-powered Pomodoro-based task scheduling application that h
 ├── docker-compose.yml
 ├── Dockerfile-fastapi
 ├── Dockerfile-telegram
-├── frontend/
-│   ├── react-frontend/
+│   ├─react-frontend/
 │   │   ├── public/
 │   │   ├── src/
 │   │   │   ├── components/
@@ -212,7 +211,7 @@ Same as the **`POST /schedule`** response.
 4. **Set environment variables:**
    ```bash
    export GOOGLE_API_KEY="your_gemini_api_key"
-   export REDIS_URL="redis://redis:6379/0"
+   export REDIS_URL=redis_url
    export TELEGRAM_TOKEN="your_telegram_bot_token"
    export TELEGRAM_CHAT_ID="your_telegram_chat_id"
    ```

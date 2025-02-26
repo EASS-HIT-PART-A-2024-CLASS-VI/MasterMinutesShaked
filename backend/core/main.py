@@ -56,7 +56,7 @@ if not GEMINI_API_KEY:
 
 
 genai.configure(api_key=GEMINI_API_KEY)
-MODEL_NAME = "gemini-1.5-pro-002"
+MODEL_NAME = "gemini-2.0-flash"
 
 # Dependency to get the database session
 def get_db():
@@ -95,9 +95,9 @@ async def generate_schedule(input_data: InputSchema,
                 {"role": "user", "parts": [{"text": f"Please create a task schedule that starting today based on the following input: {json.dumps(input_data.dict())}"}]},
             ],
             "model": MODEL_NAME,
-            "temperature": 0.1
+            "temperature": 1
         }
-        # print(gemini_input)
+        print(gemini_input)
 
         # Call Gemini API to generate the schedule
         gemini_response = await query_gemini_model(request=gemini_input)

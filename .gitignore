@@ -164,3 +164,4 @@ cython_debug/
 MasterMinutes/
 
 .env
+.dockerignore

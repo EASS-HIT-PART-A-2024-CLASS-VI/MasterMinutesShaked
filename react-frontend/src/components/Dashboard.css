@@ -1,0 +1,121 @@
+.dashboard-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #7F7F7F;
+  }
+  
+  .dashboard-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dashboard-logo {
+    height: 40px;
+    margin-right: 15px;
+  }
+  
+  .dashboard-header h1 {
+    flex-grow: 1;
+    font-size: 1.5rem;
+  }
+  
+  .logout-btn {
+    background-color: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 6px 12px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .logout-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .dashboard-tabs {
+    display: flex;
+    background-color: var(--primary-light);
+    padding: 0 20px;
+  }
+  
+  .dashboard-tabs button {
+    padding: 12px 20px;
+    background-color: transparent;
+    color: white;
+    border: none;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.3s;
+    font-weight: 500;
+  }
+  
+  .dashboard-tabs button:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .dashboard-tabs button.active {
+    opacity: 1;
+    border-bottom: 3px solid white;
+  }
+  
+  .dashboard-content {
+    flex-grow: 1;
+    padding: 20px;
+    background-color: var(--background-color);
+  }
+  
+  .tasks-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    .tasks-section {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .fetch-schedule-section {
+    background-color: var(--card-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--box-shadow);
+  }
+  
+  .fetch-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .fetch-form input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+  }
+  
+  .fetch-form button {
+    padding: 10px 15px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .fetch-form button:hover {
+    background-color: var(--primary-dark);
+  }
+  

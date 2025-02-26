@@ -1,1 +1,6 @@
 GOOGLE_API_KEY=your_gemini_ai_key
+DATABASE_URL=your_db
+REDIS_URL=your_redis
+TELEGRAM_TOKEN=your_correct_telegram_token
+TELEGRAM_CHAT_ID=your_telegram_id
+SECRET_KEY=secret

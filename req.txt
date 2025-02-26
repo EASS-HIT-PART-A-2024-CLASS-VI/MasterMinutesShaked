@@ -1,0 +1,25 @@
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqb2huX2RvZSIsImV4cCI6MTc0MDE2NzcyNX0.6vO2MicHo_Gvg7j22zmRbHuZv3H-QXJvfsNZbYw4t3k
+
+curl -X POST "http://127.0.0.1:8000/schedule" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqb2huX2RvZSIsImV4cCI6MTc0MDE2NzcyNX0.6vO2MicHo_Gvg7j22zmRbHuZv3H-QXJvfsNZbYw4t3k"
+  -d '{
+    "tasks": [
+      {
+        "task_name": "Team Meeting",
+        "duration": 90,
+        "priority": "High",
+        "notes": "Discuss project updates"
+      },
+      {
+        "task_name": "Code Review",
+        "duration": 45,
+        "priority": "Medium"
+      }
+    ],
+    "constraints": {
+      "working_hours": "09:00-17:00",
+      "workdays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    }
+  }'
+

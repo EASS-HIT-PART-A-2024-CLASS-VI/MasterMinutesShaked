@@ -1,38 +1,102 @@
-# 📅 MasterMinutes: A LLM-Powered Task Scheduler API
 
-A **FastAPI**-based project that leverages a **Large Language Model (LLM)** to intelligently schedule tasks based on user-defined constraints. This project automates and optimizes the scheduling process, making it more efficient and adaptable.
-
+# 📅MasterMinutes: A LLM-Powered Task Scheduler Application
+MasterMinutes is an AI-powered Pomodoro-based task scheduling application that helps you stay focused and productive. Leveraging advanced LLM capabilities, it intelligently organizes your tasks, optimizes work sessions, and provides smart recommendations to enhance time management. Whether you're tackling deep work, managing multiple projects, or simply aiming to boost efficiency, MasterMinutes ensures you make the most of every minute.
 ---
+## 📊 Project Diagram
+
+![Project Diagram](./diagram.png)
 
 ## 📁 Project Structure
-
+ 
 ```
-├── main.py         # Core FastAPI application file
-├── modules.py      # Pydantic models for data validation
-├── test_llm.py     # Pytest suite for API tests
-├── run_tests.sh    # Shell script to execute tests
-├── requirements.txt # Python dependencies
-├── Dockerfile      # Docker configuration file
-└── README.md       # Project documentation
+.
+├── __pycache__/                # Compiled Python files
+├── .dockerignore               # Docker ignore file
+├── .env                        # Environment variables file
+├── .envExample                 # Example environment variables file
+├── .gitignore                  # Git ignore file
+├── .pytest_cache/              # Pytest cache directory
+├── .vscode/                    # VSCode configuration directory
+├── backend/                    # Backend directory
+│   ├── __init__.py             # Backend package initializer
+│   ├── auth/                   # Authentication module
+│   │   ├── __init__.py
+│   │   └── auth.py             # Authentication logic
+│   ├── core/                   # Core application logic
+│   │   ├── __init__.py
+│   │   └── main.py             # Core FastAPI application file
+│   ├── db/                     # Database configuration and models
+│   │   ├── __init__.py
+│   │   ├── database.py         # Database configuration
+│   │   └── models.py           # SQLAlchemy models and Pydantic schemas
+│   ├── services/               # Services and business logic
+│   │   ├── __init__.py
+│   │   └── telegram_service.py # Telegram service for sending notifications
+│   ├── tests/                  # Test cases
+│   │   ├── __init__.py
+│   │   └── test_llm.py         # Pytest suite for API tests
+│   └── utils/                  # Utility functions
+│       ├── __init__.py
+│       └── utils.py            # Utility functions
+├── docker-compose.yml          # Docker Compose configuration file
+├── Dockerfile-fastapi          # Dockerfile for FastAPI backend
+├── Dockerfile-telegram         # Dockerfile for Telegram service
+├── frontend/                   # Frontend directory
+│   ├── react-frontend/         # React frontend application directory
+│   │   ├── public/             # Public directory for static files
+│   │   ├── src/                # Source directory
+│   │   │   ├── components/     # React components
+│   │   │   │   ├── Dashboard.js
+│   │   │   │   ├── TaskForm.js
+│   │   │   │   ├── TaskList.js
+│   │   │   │   ├── ScheduleForm.js
+│   │   │   │   ├── ScheduleViewer.js
+│   │   │   │   └── fornted.js  # The provided file
+│   │   │   ├── services/       # API services
+│   │   │   │   ├── api.js
+│   │   │   │   └── telegramApi.js
+│   │   │   ├── App.js          # Main React component
+│   │   │   └── index.js        # Entry point for React application
+│   │   ├── .gitignore          # Git ignore file for React frontend
+│   │   ├── package.json        # NPM package configuration file
+│   │   └── README.md           # README file for React frontend
+│   ├── streamlit_app.py        # Streamlit application file
+│   └── streamlit_requirements.txt # Streamlit dependencies
+├── icon.png                    # Icon image file
+├── iconback.png                # Background icon image file
+├── README.md                   # Project documentation
+├── req.txt                     # Additional requirements file
+├── requirements.txt            # Python dependencies
+├── run_tests.sh                # Shell script to execute tests
+└── test.db                     # SQLite database file for testing
 ```
 
 - **`main.py`**: Defines API endpoints and contains scheduling logic.
-- **`modules.py`**: Houses Pydantic models for request and response validation.
+- **`moudles.py`**: Houses SQLAlchemy models and Pydantic schemas for request and response validation.
 - **`test_llm.py`**: Contains automated test cases for API functionality.
 - **`run_tests.sh`**: A shell script to automate testing.
 - **`requirements.txt`**: Lists all required Python dependencies for the project.
-- **`Dockerfile`**: Contains instructions to containerize the application using Docker.
+- **`Dockerfile-fastapi`**: Contains instructions to containerize the FastAPI backend.
+- **`Dockerfile-streamlit`**: Contains instructions to containerize the Streamlit frontend.
+- **`Dockerfile-telegram`**: Contains instructions to containerize the Telegram service.
 - **`README.md`**: Comprehensive guide to the project.
 
 ---
 
+
 ## ⚙️ API Endpoints Overview
 
-| **Method** | **Endpoint**                          | **Description**                                                                                 |
-|------------|--------------------------------------|---------------------------------------------------------------------------------------------|
-| **POST**   | `/schedule`                          | Generates a task schedule using an LLM or fallback local scheduler.                         |
-| **GET**    | `/schedule/{schedule_id}`            | Retrieves a schedule by its unique ID.                                                     |
-| **PUT**    | `/schedule/{schedule_id}/task/{task_id}` | Updates a specific task within a schedule.                                                 |
+| **Method** | **Endpoint**                                   | **Description**                                                                 |
+|------------|-----------------------------------------------|---------------------------------------------------------------------------------|
+| **POST**   | `/schedule`                                   | Generates a task schedule using Gemini or a fallback local scheduler.          |
+| **GET**    | `/schedule/{schedule_id}`                     | Retrieves a schedule by its unique ID.                                         |
+| **PUT**    | `/schedule/{schedule_id}/task/{task_id}`      | Updates a specific task within a schedule.                                     |
+| **POST**   | `/gemini/query`                               | Queries the Gemini LLM to generate a JSON schedule.                            |
+| **POST**   | `/register`                                   | Registers a new user account.                                                  |
+| **POST**   | `/token`                                      | Authenticates a user and returns an access token.                              |
+| **GET**    | `/users/me`                                   | Retrieves the currently authenticated user's information.                       |
+| **GET**    | `/get_schedule/{schedule_id}`                 | Fetches the schedule and sends it to the user's Telegram chat.                 |
+
 
 ---
 
@@ -159,6 +223,9 @@ Same as the **`POST /schedule`** response.
 4. **Set environment variables:**
    ```bash
    export GOOGLE_API_KEY="your_gemini_api_key"
+   export REDIS_URL="redis://redis:6379/0"
+   export TELEGRAM_TOKEN="your_telegram_bot_token"
+   export TELEGRAM_CHAT_ID="your_telegram_chat_id"
    ```
 
 5. **Run the application:**
@@ -206,7 +273,3 @@ This script:
 - Shuts down the application.
 
 ---
-
-## 📜 License
-
-This project is licensed under the [Your License] License. See **LICENSE.md** for details. 

@@ -1,0 +1,18 @@
+# Ignore Python cache and local files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+
+# Ignore your virtual environment folder (if present)
+venv/
+*.egg-info
+
+node_modules/
+
+MasterMinutes.zip
+
+.vscode/
+
+.pytest_cache/

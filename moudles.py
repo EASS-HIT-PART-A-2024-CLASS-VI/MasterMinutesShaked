@@ -13,16 +13,18 @@ import uuid
 Base = declarative_base()
 
 class Task(Base):
-    __tablename__ = 'tasks'
-    id = Column(String, primary_key=True, index=True)
+    __tablename__ = "tasks"
+
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, index=True)
     start_time = Column(String)
     end_time = Column(String)
-    # duration_minutes = Column(Integer)
     priority = Column(String)
     notes = Column(String, nullable=True)
     date = Column(Date)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)  # Foreign key to link task to user
 
+    user = relationship("User", back_populates="tasks")  # Relationship for user access
 class User(Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))

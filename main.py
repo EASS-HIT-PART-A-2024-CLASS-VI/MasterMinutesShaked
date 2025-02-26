@@ -313,8 +313,8 @@ async def check_and_send_notifications():
         # Calculate the target time (10 minutes from now)
         # target_time = now + timedelta(minutes=10)
         # We create a window [target_time, target_time + 1 minute) to catch tasks scheduled at that minute.
-        lower_bound = now.replace(second=0, microsecond=0)
-        upper_bound = lower_bound + timedelta(minutes=11)
+        lower_bound = now + timedelta(minutes=10)
+        upper_bound = lower_bound + timedelta(minutes=1)
 
         # Query all tasks (in a more advanced version, filter by date and notified status)
         tasks = session.query(Task).all()
@@ -404,6 +404,45 @@ import moudles as models
 @app.get("/users/me", response_model=UserOut)
 def read_users_me(current_user: models.User = Depends(get_current_active_user)):
     return current_user
+async def send_long_message(bot, chat_id, message):
+    """Helper function to split and send long messages."""
+    max_length = 4000  # Keeping a safe limit below 4096
+    parts = [message[i:i + max_length] for i in range(0, len(message), max_length)]
+    
+    for part in parts:
+        await bot.send_message(chat_id=chat_id, text=part, parse_mode="Markdown")
+
+@app.get("/get_schedule")
+async def get_schedule_telegram(db: Session = Depends(get_db)):
+    """Fetch all scheduled tasks and send them to Telegram in chunks if needed."""
+    tasks = db.query(Task).all()
+
+    if not tasks:
+        return {"message": "No tasks found in the schedule"}
+
+    message = "📅 **Your Current Schedule:**\n\n"
+    for task in tasks:
+        task_info = (
+            f"📌 **Task:** {task.name}\n"
+            f"🕒 **Start:** {task.start_time}\n"
+            f"🕘 **End:** {task.end_time}\n"
+            f"🎯 **Priority:** {task.priority}\n"
+            f"📅 **Date:** {task.date}\n"
+            f"📝 **Notes:** {task.notes or 'None'}\n\n"
+        )
+        
+        # If adding this task makes message too long, send the existing message and reset
+        if len(message) + len(task_info) > 4000:
+            await send_long_message(Bot(token=TELEGRAM_TOKEN), TELEGRAM_CHAT_ID, message)
+            message = "📅 **Continued Schedule:**\n\n"  # Start a new message block
+
+        message += task_info
+
+    # Send the remaining message
+    if message:
+        await send_long_message(Bot(token=TELEGRAM_TOKEN), TELEGRAM_CHAT_ID, message)
+
+    return {"message": "Schedule sent to Telegram"}
 
 # Run the FastAPI application
 if __name__ == "__main__":

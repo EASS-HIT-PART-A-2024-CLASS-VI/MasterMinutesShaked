@@ -273,11 +273,3 @@ This script:
 - Shuts down the application.
 
 ---
-
-## 📜 License
-
-This project is licensed under the [Your License] License. See **LICENSE.md** for details.
-```
-
-This `README.md` file provides an overview of the project, its features, prerequisites, setup instructions, project structure, and usage. Adjust the content as needed to fit your specific project details.
-This `README.md` file provides an overview of the project, its features, prerequisites, setup instructions, project structure, and usage. Adjust the content as needed to fit your specific project details.

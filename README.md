@@ -209,25 +209,28 @@ Same as the **`POST /schedule`** response.
    ```
 
 4. **Set environment variables:**
+   Create .env file in backend folder, react folder and root folder which contain the following variables 
+
    ```bash
-   export GOOGLE_API_KEY="your_gemini_api_key"
-   export REDIS_URL=redis_url
-   export TELEGRAM_TOKEN="your_telegram_bot_token"
-   export TELEGRAM_CHAT_ID="your_telegram_chat_id"
+   
+   GOOGLE_API_KEY="your_gemini_api_key"
+   REDIS_URL="your_redis_url"
+   TELEGRAM_TOKEN="your_telegram_bot_token"
+   TELEGRAM_CHAT_ID="your_telegram_chat_id"
    ```
 
-5. **Run the application:**
+6. **Run the application:**
    ```bash
    uvicorn main:app --port 1236 --reload
    ```
 
-6. **Run tests:**
+7. **Run tests:**
    ```bash
    chmod +x run_tests.sh
    ./run_tests.sh
    ```
 
-7. **Access the API Docs:**
+8. **Access the API Docs:**
    Navigate to **[http://127.0.0.1:1236/docs](http://127.0.0.1:1236/docs)** for Swagger UI.
 
 ---
@@ -246,6 +249,10 @@ Same as the **`POST /schedule`** response.
 
 3. **Access the API Docs:**
    Visit **[http://127.0.0.1:1236/docs](http://127.0.0.1:1236/docs)**.
+
+   
+4. **Access the Web Application:**
+   Visit **[http://127.0.0.1:3000](http://127.0.0.1:3000)**.
 
 ---
 

@@ -23,12 +23,6 @@ app = FastAPI()
 
 origins = ["*"]
 
-# origins = [
-#     "localhost",
-#     "react-frontend_1",
-#     "react-frontend"
-# ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # Allow specific origins
@@ -97,14 +91,10 @@ async def generate_schedule(input_data: InputSchema,
             "model": MODEL_NAME,
             "temperature": 1
         }
-        # print(gemini_input)
 
         # Call Gemini API to generate the schedule
         gemini_response = await query_gemini_model(request=gemini_input)
         
-        # Log the raw response for debugging
-        # print("Gemini Response (Raw):", gemini_response)
-
         response_text = gemini_response.get("response_text", None)
 
         if response_text:
@@ -114,10 +104,7 @@ async def generate_schedule(input_data: InputSchema,
             try:
                 # Try to parse the cleaned response as JSON
                 schedule_data = json.loads(cleaned_response_text)
-                # for task in schedule_data:
-                    # task['user_id'] = current_user.id
                 schedule_data = {"schedule": schedule_data}
-                # print("Parsed Gemini Schedule:", schedule_data)
             except json.JSONDecodeError:
                 raise HTTPException(status_code=400, detail=f"Failed to parse Gemini's response into valid JSON. Raw response: {cleaned_response_text}")
 
@@ -135,8 +122,6 @@ async def generate_schedule(input_data: InputSchema,
             db.commit()
 
             for task in schedule_data["schedule"]:
-                # task_id = str(uuid.uuid4())
-                # task['id'] = task_id
                 db_task = Task(
                 id=task['task_id'], 
                 schedule_id = schedule_id,
@@ -146,12 +131,10 @@ async def generate_schedule(input_data: InputSchema,
                 priority=task["priority"],
                 notes=task.get("notes"),
                 date=datetime.strptime(task["date"], "%Y-%m-%d").date(),
-                # user_id=task["user_id"]
                 )
                 db.add(db_task)
             db.commit()
             cache_data(schedule_id, schedule_data)
-         #   send_schedule_to_telegram(schedule_data)
 
             return OutputSchema(schedule_id=schedule_id, schedule=schedule_data["schedule"], notes=schedule_data.get("notes", ""))
 
@@ -165,7 +148,6 @@ async def generate_schedule(input_data: InputSchema,
 @app.put("/schedule/{schedule_id}/task/{task_id}")
 async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem, db: Session = Depends(get_db),
                       current_user=Depends(get_current_active_user)):
-    # task = db.query(Task).filter(Task.id == task_id).first()
     task = db.query(Task).filter(
         Task.id == task_id,
         Task.schedule_id == schedule_id,
@@ -190,7 +172,6 @@ async def get_schedule(schedule_id: str, db: Session = Depends(get_db), current_
     if cached_schedule:
         return OutputSchema(schedule_id=schedule_id, schedule=cached_schedule["schedule"], notes=cached_schedule.get("notes"))
 
-    # tasks = db.query(Task).filter(Task.schedule_id == schedule_id).all()
     tasks = db.query(Task).filter(
         Task.schedule_id == schedule_id,
     ).all()
@@ -199,7 +180,6 @@ async def get_schedule(schedule_id: str, db: Session = Depends(get_db), current_
 
     schedule = [ScheduleItem(
         task_id=task.id,
-        # user_id = task.user_id,
         task_name=task.name,
         start_time=task.start_time,
         end_time=task.end_time,
@@ -325,20 +305,6 @@ For a task with X total minutes:
     raise HTTPException(status_code=500, detail="Failed to query Gemini API after multiple retries")
 
 
-
-
-
-# @app.post("/token", response_model=Token)
-# async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-#     # Authenticate the user using the fake users database.
-#     user = authenticate_user(fake_users_db, form_data.username, form_data.password)
-#     if not user:
-#          raise HTTPException(status_code=400, detail="Incorrect username or password")
-#     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#     access_token = create_access_token(
-#          data={"sub": user.username}, expires_delta=access_token_expires
-#     )
-#     return {"access_token": access_token, "token_type": "bearer"}
 
 from backend.db.moudles import UserCreate, UserOut, Token
 from backend.db.moudles import User

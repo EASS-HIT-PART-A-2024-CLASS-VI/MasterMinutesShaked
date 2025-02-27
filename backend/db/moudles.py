@@ -27,7 +27,6 @@ class Task(Base):
     __tablename__ = 'tasks'
     id = Column(String, primary_key=True, index=True)
     schedule_id = Column(String, ForeignKey("schedule.id"))
-    # user_id = Column(String, ForeignKey("users.id"), nullable=False)
     name = Column(String, index=True)
     start_time = Column(String)
     end_time = Column(String)
@@ -67,7 +66,6 @@ class InputSchema(BaseModel):
 
 class ScheduleItem(BaseModel):
     task_id: str
-    # user_id: str  # Link task to a specific user
     task_name: str
     start_time: str  # Assuming "HH:MM" format
     end_time: str

@@ -2,9 +2,58 @@
 # 📅MasterMinutes: A LLM-Powered Task Scheduler Application
 MasterMinutes is an AI-powered Pomodoro-based task scheduling application that helps you stay focused and productive. Leveraging advanced LLM capabilities, it intelligently organizes your tasks, optimizes work sessions, and provides smart recommendations to enhance time management. Whether you're tackling deep work, managing multiple projects, or simply aiming to boost efficiency, MasterMinutes ensures you make the most of every minute.
 ---
-## 📊 Project Diagram
+## 📊 System Design Overview
+
+Below is a high-level system design that illustrates how **MasterMinutes** components interact with each other. Each sub-component is explained in terms of its role and why it is needed.
 
 ![Project Diagram](./diagram.png)
+
+1. **MasterMinutes Web App (React)**  
+   - **Role**: A React-based frontend interface.  
+   - **Purpose**: Provides a user-friendly platform to manage tasks, view schedules, and monitor Pomodoro sessions in real-time.  
+   - **Why Needed**: Ensures a responsive and interactive experience, making it simple to handle tasks and track productivity.
+
+2. **Telegram Sync and Reminder Service**  
+   - **Role**: A backend service responsible for scheduling and sending reminders.  
+   - **Purpose**: Integrates with Telegram to push notifications and reminders, ensuring users stay updated on tasks and timers.  
+   - **Why Needed**: Offers an alternative notification channel beyond the web app, improving accessibility and user engagement.
+
+3. **MasterMinutes API (FastAPI)**  
+   - **Role**: The main backend API for the application.  
+   - **Purpose**: Handles core logic for task management, scheduling, and user data. It exposes endpoints for the React frontend and the Telegram service.  
+   - **Why Needed**: Centralizes business logic and data flow, ensuring consistent operations and easy maintenance.
+
+4. **Google Gemini (LLM)**  
+   - **Role**: The AI/LLM component integrated into the system.  
+   - **Purpose**: Provides intelligent recommendations, such as optimal Pomodoro durations, task ordering, and productivity tips.  
+   - **Why Needed**: Elevates the user experience by offering context-aware assistance, saving time, and improving efficiency.
+
+5. **Cache (Redis)**  
+   - **Role**: A caching layer for frequently accessed or transient data.  
+   - **Purpose**: Stores session data, scheduling info, and other data that benefit from quick retrieval.  
+   - **Why Needed**: Enhances performance and scalability by reducing the load on the primary data store and speeding up data access.
+
+6. **Telegram (Cloud/External Services)**  
+   - **Role**: External messaging platform used for notifications.  
+   - **Purpose**: Delivers reminders and updates to users directly via Telegram messages.  
+   - **Why Needed**: Expands the ways users can interact with MasterMinutes, making sure they never miss an important reminder.
+
+---
+
+### How It All Fits Together
+
+1. **User Interaction**: The user works within the **MasterMinutes Web App (React)** to create tasks, set Pomodoro timers, and manage schedules.  
+2. **API Requests**: The React frontend communicates with the **MasterMinutes API (FastAPI)** for all core functionalities.  
+3. **AI Recommendations**: When smart suggestions are needed, the API consults **Gpt4All** to generate optimal task orders or productivity tips.  
+4. **Caching**: Data that needs to be quickly accessed (e.g., user session info) is stored in **Redis**, improving performance and reducing repetitive database calls.  
+5. **Notifications**: The **Telegram Sync and Reminder Service** schedules and sends reminders to users via **Telegram**, ensuring timely updates and higher engagement.  
+
+By separating concerns across these distinct components, **MasterMinutes** remains modular, scalable, and maintainable—ready to help you make the most of every minute.
+
+
+
+
+
 
 ## 📁 Project Structure
  

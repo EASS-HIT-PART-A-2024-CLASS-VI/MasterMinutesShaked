@@ -2,6 +2,11 @@
 # 📅MasterMinutes: A LLM-Powered Task Scheduler Application
 MasterMinutes is an AI-powered Pomodoro-based task scheduling application that helps you stay focused and productive. Leveraging advanced LLM capabilities, it intelligently organizes your tasks, optimizes work sessions, and provides smart recommendations to enhance time management. Whether you're tackling deep work, managing multiple projects, or simply aiming to boost efficiency, MasterMinutes ensures you make the most of every minute.
 ---
+
+
+## 🎥 Youtube link:
+
+https://www.youtube.com/watch?v=iYtngpLOuL0&ab_channel=ShakedNuttman
 ## 📊 System Design Overview
 
 Below is a high-level system design that illustrates how **MasterMinutes** components interact with each other. Each sub-component is explained in terms of its role and why it is needed.

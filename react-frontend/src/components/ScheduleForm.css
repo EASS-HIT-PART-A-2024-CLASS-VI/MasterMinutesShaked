@@ -1,61 +1,122 @@
 .schedule-form {
-    background-color: var(--card-color);
-    border-radius: var(--border-radius);
-    padding: 20px;
-    box-shadow: var(--box-shadow);
-  }
-  
-  .schedule-form h2 {
-    margin-bottom: 20px;
-    color: var(--primary-dark);
-  }
-  
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-bottom: 15px;
-  }
-  
-  .working-days-select {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
-    margin-top: 5px;
-  }
-  
-  .day-checkbox {
-    display: flex;
-    align-items: center;
-  }
-  
-  .day-checkbox input {
-    margin-right: 5px;
-  }
-  
-  .create-schedule-btn {
-    width: 100%;
-    padding: 12px;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    margin-top: 15px;
-  }
-  
-  .create-schedule-btn:hover {
-    background-color: var(--primary-dark);
-  }
-  
-  .json-error {
-    color: var(--error-color);
-    margin-top: 10px;
-    padding: 10px;
-    background-color: rgba(244, 67, 54, 0.1);
-    border-radius: var(--border-radius);
-  }
-  
+  background-color: var(--card-color);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: var(--box-shadow);
+}
+
+.schedule-form h2 {
+  margin-bottom: 20px;
+  color: var(--primary-dark);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.working-days-select {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.day-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.day-checkbox input {
+  margin-right: 5px;
+}
+
+.create-schedule-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 15px;
+}
+
+.create-schedule-btn:hover {
+  background-color: var(--primary-dark);
+}
+
+.json-error {
+  color: var(--error-color);
+  margin-top: 10px;
+  padding: 10px;
+  background-color: rgba(244, 67, 54, 0.1);
+  border-radius: var(--border-radius);
+}
+
+/* New styles for the breaks UI */
+.breaks-container {
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: var(--border-radius);
+  padding: 15px;
+  margin-top: 5px;
+}
+
+.no-breaks {
+  color: var(--text-light, #666);
+  font-style: italic;
+  margin: 10px 0;
+}
+
+.breaks-list {
+  margin-bottom: 15px;
+}
+
+.break-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--light-background, #f5f5f5);
+  border-radius: var(--border-radius);
+  margin-bottom: 8px;
+}
+
+.remove-break-btn {
+  background: none;
+  border: none;
+  color: var(--error-color, #f44336);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 5px;
+}
+
+.add-break-form {
+  margin-top: 10px;
+}
+
+.break-time-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.add-break-btn {
+  padding: 8px 12px;
+  background-color: var(--secondary-color, #4caf50);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-break-btn:hover {
+  background-color: var(--secondary-dark, #388e3c);
+}

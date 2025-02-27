@@ -97,27 +97,27 @@ async def generate_schedule(input_data: InputSchema,
             "model": MODEL_NAME,
             "temperature": 1
         }
-        print(gemini_input)
+        # print(gemini_input)
 
         # Call Gemini API to generate the schedule
         gemini_response = await query_gemini_model(request=gemini_input)
         
         # Log the raw response for debugging
-        print("Gemini Response (Raw):", gemini_response)
+        # print("Gemini Response (Raw):", gemini_response)
 
         response_text = gemini_response.get("response_text", None)
 
         if response_text:
             # Clean the response to remove any code block markdown
             cleaned_response_text = response_text.strip("```json").replace("```", "").strip()
-            print(cleaned_response_text)
+            # print(cleaned_response_text)
             try:
                 # Try to parse the cleaned response as JSON
                 schedule_data = json.loads(cleaned_response_text)
                 # for task in schedule_data:
                     # task['user_id'] = current_user.id
                 schedule_data = {"schedule": schedule_data}
-                print("Parsed Gemini Schedule:", schedule_data)
+                # print("Parsed Gemini Schedule:", schedule_data)
             except json.JSONDecodeError:
                 raise HTTPException(status_code=400, detail=f"Failed to parse Gemini's response into valid JSON. Raw response: {cleaned_response_text}")
 
@@ -132,12 +132,13 @@ async def generate_schedule(input_data: InputSchema,
                 user_id = current_user.id
             )
             db.add(db_scheudle)
-
-            # TODO: try remove db here
             db.commit()
+
             for task in schedule_data["schedule"]:
+                # task_id = str(uuid.uuid4())
+                # task['id'] = task_id
                 db_task = Task(
-                id=str(uuid.uuid4()), 
+                id=task['task_id'], 
                 schedule_id = schedule_id,
                 name=task["task_name"],
                 start_time=task["start_time"],
@@ -174,8 +175,8 @@ async def update_task(schedule_id: str, task_id: str, updated_task: ScheduleItem
         raise HTTPException(status_code=404, detail="Task not found")
 
     task.name = updated_task.task_name
-    task.start_time = datetime.strptime(updated_task.start_time, "%H:%M").time()
-    task.end_time = datetime.strptime(updated_task.end_time, "%H:%M").time()
+    task.start_time = updated_task.start_time
+    task.end_time = updated_task.end_time
     task.priority = updated_task.priority
     task.notes = updated_task.notes
     db.commit()

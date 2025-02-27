@@ -225,17 +225,18 @@ Same as the **`POST /schedule`** response.
    ```
 
 7. **Run tests:**
+   You need to run the docker containers (Use the "Running with docker-compose" below).
+   Then open a new termial instance in the project's root folder run the following command:
    ```bash
-   chmod +x run_tests.sh
-   ./run_tests.sh
+   pytest backend/tests/test_llm.py
    ```
 
-8. **Access the API Docs:**
+9. **Access the API Docs:**
    Navigate to **[http://127.0.0.1:1236/docs](http://127.0.0.1:1236/docs)** for Swagger UI.
 
 ---
 
-## 🐳 Running with Docker-compose
+## 🐳 Running with docker-compose
 
 1. **Build the Docker images:**
    ```bash

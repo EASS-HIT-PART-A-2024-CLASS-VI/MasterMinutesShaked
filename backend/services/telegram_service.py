@@ -16,7 +16,6 @@ import backend.db.moudles as models
 load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-print("telegram-token:"+TELEGRAM_TOKEN)
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@db:5432/tasks_db")
 app = FastAPI()
@@ -120,8 +119,6 @@ async def check_and_send_notifications():
                         f"Reminder: Your task '{task.name}' is scheduled to start at "
                         f"{task.start_time} on {task.date.strftime('%Y-%m-%d')}."
                     )
-                    print(message)
-                    print(TELEGRAM_CHAT_ID)
                     await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
                     print(f"Sent notification for task {task.id}")
                     # Optionally update the task (e.g., task.notified = True) to avoid sending duplicate notifications.

@@ -9,11 +9,12 @@ const ScheduleForm = ({ onCreateSchedule }) => {
     'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'
   ]);
   const [constraintsJson, setConstraintsJson] = useState('{}');
-  const [breaksJson, setBreaksJson] = useState('[]');
+  const [breaks, setBreaks] = useState([]);
+  const [newBreak, setNewBreak] = useState({ start: '12:00', end: '13:00' });
   const [jsonError, setJsonError] = useState(null);
 
   const weekdays = [
-    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 
+    'Sunday', 'Monday', 'Tuesday', 'Wednesday',
     'Thursday', 'Friday', 'Saturday'
   ];
 
@@ -36,23 +37,46 @@ const ScheduleForm = ({ onCreateSchedule }) => {
     }
   };
 
+  const handleAddBreak = () => {
+    if (newBreak.start && newBreak.end) {
+      setBreaks([...breaks, { ...newBreak }]);
+      setNewBreak({ start: '', end: '' });
+    }
+  };
+
+  const handleRemoveBreak = (index) => {
+    const updatedBreaks = [...breaks];
+    updatedBreaks.splice(index, 1);
+    setBreaks(updatedBreaks);
+  };
+
+  const updateBreakField = (field, value) => {
+    setNewBreak({
+      ...newBreak,
+      [field]: value
+    });
+  };
+
+  const generateBreaksJson = () => {
+    return JSON.stringify(breaks, null, 2);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Validate JSON inputs
+   
+    // Validate JSON input for constraints
     const isConstraintsValid = validateJson(constraintsJson, 'Constraints');
-    const isBreaksValid = validateJson(breaksJson, 'Breaks');
     
-    if (!isConstraintsValid || !isBreaksValid) {
+    if (!isConstraintsValid) {
       return;
     }
-    
+   
     onCreateSchedule({
       startHourDay,
       endHourDay,
       workingDays,
       constraints: JSON.parse(constraintsJson),
-      breaks: JSON.parse(breaksJson)
+      breaks: breaks
     });
   };
 
@@ -71,7 +95,7 @@ const ScheduleForm = ({ onCreateSchedule }) => {
               required
             />
           </div>
-          
+         
           <div className="form-group">
             <label htmlFor="endHour">End Hour of Day</label>
             <input
@@ -83,7 +107,7 @@ const ScheduleForm = ({ onCreateSchedule }) => {
             />
           </div>
         </div>
-        
+       
         <div className="form-group">
           <label>Working Days</label>
           <div className="working-days-select">
@@ -100,7 +124,7 @@ const ScheduleForm = ({ onCreateSchedule }) => {
             ))}
           </div>
         </div>
-        
+       
         <div className="form-group">
           <label htmlFor="constraints">Constraints (JSON format)</label>
           <textarea
@@ -110,19 +134,63 @@ const ScheduleForm = ({ onCreateSchedule }) => {
             rows="4"
           />
         </div>
-        
+       
         <div className="form-group">
-          <label htmlFor="breaks">Breaks (JSON format)</label>
-          <textarea
-            id="breaks"
-            value={breaksJson}
-            onChange={(e) => setBreaksJson(e.target.value)}
-            rows="4"
-          />
+          <label>Breaks</label>
+          <div className="breaks-container">
+            {breaks.length > 0 ? (
+              <div className="breaks-list">
+                {breaks.map((breakItem, index) => (
+                  <div key={index} className="break-item">
+                    <span>{breakItem.start} - {breakItem.end}</span>
+                    <button 
+                      type="button" 
+                      className="remove-break-btn"
+                      onClick={() => handleRemoveBreak(index)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-breaks">No breaks added</p>
+            )}
+            
+            <div className="add-break-form">
+              <div className="break-time-inputs">
+                <div className="form-group">
+                  <label htmlFor="breakStart">Start</label>
+                  <input
+                    type="time"
+                    id="breakStart"
+                    value={newBreak.start}
+                    onChange={(e) => updateBreakField('start', e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="breakEnd">End</label>
+                  <input
+                    type="time"
+                    id="breakEnd"
+                    value={newBreak.end}
+                    onChange={(e) => updateBreakField('end', e.target.value)}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                className="add-break-btn"
+                onClick={handleAddBreak}
+              >
+                Add Break
+              </button>
+            </div>
+          </div>
         </div>
-        
+       
         {jsonError && <div className="json-error">{jsonError}</div>}
-        
+       
         <button type="submit" className="create-schedule-btn">Create Schedule</button>
       </form>
     </div>

@@ -315,7 +315,7 @@ Same as the **`POST /schedule`** response.
 
 To validate the functionality:
 ```bash
-./run_tests.sh
+pytest backend/tests/test_llm.py
 ```
 This script:
 - Starts the application.
